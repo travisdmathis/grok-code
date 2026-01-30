@@ -1,11 +1,24 @@
 """xAI API client for Grok models"""
 
+import html
 import json
 import os
 from dataclasses import dataclass, field
-from typing import AsyncIterator, Callable
+from typing import Callable
 
 import httpx
+
+
+def _unescape_html_in_dict(obj):
+    """Recursively unescape HTML entities in strings within a dict/list"""
+    if isinstance(obj, str):
+        return html.unescape(obj)
+    elif isinstance(obj, dict):
+        return {k: _unescape_html_in_dict(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_unescape_html_in_dict(item) for item in obj]
+    return obj
+
 
 XAI_API_BASE = "https://api.x.ai/v1"
 DEFAULT_MODEL = "grok-3-latest"
@@ -117,7 +130,7 @@ class GrokClient:
                 ToolCall(
                     id=tc["id"],
                     name=tc["function"]["name"],
-                    arguments=json.loads(tc["function"]["arguments"]),
+                    arguments=_unescape_html_in_dict(json.loads(tc["function"]["arguments"])),
                 )
                 for tc in msg["tool_calls"]
             ]
@@ -152,7 +165,9 @@ class GrokClient:
             tool_calls_data: dict[int, dict] = {}
 
             try:
-                async with self._client.stream("POST", "/chat/completions", json=payload) as response:
+                async with self._client.stream(
+                    "POST", "/chat/completions", json=payload
+                ) as response:
                     response.raise_for_status()
                     async for line in response.aiter_lines():
                         if not line.startswith("data: "):
@@ -200,7 +215,11 @@ class GrokClient:
                     for idx in sorted(tool_calls_data.keys()):
                         tc_data = tool_calls_data[idx]
                         try:
-                            args = json.loads(tc_data["arguments"]) if tc_data["arguments"] else {}
+                            args = (
+                                _unescape_html_in_dict(json.loads(tc_data["arguments"]))
+                                if tc_data["arguments"]
+                                else {}
+                            )
                         except json.JSONDecodeError:
                             args = {}
                         tool_calls.append(
@@ -218,6 +237,7 @@ class GrokClient:
                 if attempt < max_retries:
                     # Wait before retry
                     import asyncio
+
                     await asyncio.sleep(1.0 * (attempt + 1))
                     continue
                 # If we got partial content, return what we have
@@ -227,7 +247,9 @@ class GrokClient:
                         content=full_content + "\n\n[Response interrupted - connection error]",
                         tool_calls=None,
                     )
-                raise RuntimeError(f"API connection failed after {max_retries + 1} attempts: {e}") from e
+                raise RuntimeError(
+                    f"API connection failed after {max_retries + 1} attempts: {e}"
+                ) from e
 
     async def __aenter__(self):
         return self

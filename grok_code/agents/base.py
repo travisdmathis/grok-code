@@ -3,7 +3,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
 import uuid
 
 
@@ -20,6 +19,7 @@ BASE_AGENT_RULES = """## Base Rules (Always Follow)
 
 class AgentType(Enum):
     """Types of agents available"""
+
     EXPLORE = "explore"
     PLAN = "plan"
     GENERAL = "general"
@@ -29,6 +29,7 @@ class AgentType(Enum):
 @dataclass
 class AgentResult:
     """Result from an agent execution"""
+
     agent_id: str
     agent_type: AgentType
     success: bool

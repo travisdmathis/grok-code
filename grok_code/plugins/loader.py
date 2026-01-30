@@ -1,7 +1,6 @@
 """Plugin loader - parses plugins with markdown + YAML frontmatter"""
 
 import json
-import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -11,6 +10,7 @@ from typing import Optional
 @dataclass
 class Agent:
     """Agent definition from markdown file"""
+
     name: str
     description: str
     prompt: str
@@ -31,6 +31,7 @@ class Agent:
 @dataclass
 class Command:
     """Command/skill definition from markdown file"""
+
     name: str
     description: str
     prompt: str
@@ -48,6 +49,7 @@ class Command:
 @dataclass
 class Skill:
     """Skill definition (auto-invoked commands)"""
+
     name: str
     description: str
     prompt: str
@@ -59,6 +61,7 @@ class Skill:
 @dataclass
 class Hook:
     """Hook definition"""
+
     name: str
     event: str  # PreToolUse, PostToolUse, SessionStart, Stop, UserPromptSubmit
     script: str
@@ -69,6 +72,7 @@ class Hook:
 @dataclass
 class Plugin:
     """A loaded plugin"""
+
     name: str
     version: str
     description: str
@@ -85,22 +89,22 @@ def parse_frontmatter(content: str) -> tuple[dict, str]:
         return {}, content
 
     # Find the closing ---
-    end_match = re.search(r'\n---\n', content[3:])
+    end_match = re.search(r"\n---\n", content[3:])
     if not end_match:
         return {}, content
 
-    frontmatter_str = content[3:end_match.start() + 3]
-    body = content[end_match.end() + 3 + 1:]
+    frontmatter_str = content[3 : end_match.start() + 3]
+    body = content[end_match.end() + 3 + 1 :]
 
     # YAML parsing with support for lists
     frontmatter = {}
     current_key = None
     current_list = None
 
-    for line in frontmatter_str.strip().split('\n'):
+    for line in frontmatter_str.strip().split("\n"):
         # Check if this is a list item (starts with whitespace and -)
         stripped = line.lstrip()
-        if stripped.startswith('- ') and current_key is not None:
+        if stripped.startswith("- ") and current_key is not None:
             # This is a list item for the current key
             item = stripped[2:].strip()
             if current_list is None:
@@ -113,14 +117,15 @@ def parse_frontmatter(content: str) -> tuple[dict, str]:
             frontmatter[current_key] = current_list
             current_list = None
 
-        if ':' in line:
-            key, value = line.split(':', 1)
+        if ":" in line:
+            key, value = line.split(":", 1)
             key = key.strip()
             value = value.strip()
 
             # Strip quotes from values (YAML allows quoted strings)
-            if (value.startswith('"') and value.endswith('"')) or \
-               (value.startswith("'") and value.endswith("'")):
+            if (value.startswith('"') and value.endswith('"')) or (
+                value.startswith("'") and value.endswith("'")
+            ):
                 value = value[1:-1]
 
             # Check if this starts a list (empty value, list items follow)
@@ -130,8 +135,8 @@ def parse_frontmatter(content: str) -> tuple[dict, str]:
                 continue
 
             # Only split into list for known list fields (tools, triggers)
-            if key in ('tools', 'triggers') and ',' in value:
-                value = [v.strip() for v in value.split(',')]
+            if key in ("tools", "triggers") and "," in value:
+                value = [v.strip() for v in value.split(",")]
 
             frontmatter[key] = value
             current_key = key

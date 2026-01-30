@@ -1,16 +1,11 @@
 """Agent status display - shows background agents like Cursor"""
 
-import asyncio
-from typing import Optional, Dict, Any
+from typing import Optional, Dict
 from dataclasses import dataclass, field
 from datetime import datetime
-from rich.console import Console, Group
 from rich.live import Live
-from rich.table import Table
 from rich.text import Text
 from rich.panel import Panel
-from rich.spinner import Spinner
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 
 from .console import console
 
@@ -18,6 +13,7 @@ from .console import console
 @dataclass
 class AgentActivity:
     """Tracks an agent's current activity"""
+
     agent_id: str
     agent_type: str
     description: str
@@ -183,17 +179,17 @@ def set_layout_callback(callback):
 
 # Agent type to color mapping
 AGENT_COLORS = {
-    "explore": "#56b6c2",    # Cyan
-    "plan": "#c678dd",       # Purple
-    "general": "#61afef",    # Blue
+    "explore": "#56b6c2",  # Cyan
+    "plan": "#c678dd",  # Purple
+    "general": "#61afef",  # Blue
     "code-reviewer": "#e06c75",  # Red
-    "default": "#5f9ea0",    # Teal
+    "default": "#5f9ea0",  # Teal
 }
 
 
 def show_agent_start(agent_id: str, agent_type: str, description: str, color: str = None):
     """Show that an agent has started"""
-    if _layout_callback and hasattr(_layout_callback, 'set_agent'):
+    if _layout_callback and hasattr(_layout_callback, "set_agent"):
         # Use provided color, or look up by agent type, or fall back to default
         resolved_color = color or AGENT_COLORS.get(agent_type, AGENT_COLORS["default"])
         _layout_callback.set_agent(agent_type, description, resolved_color)
@@ -201,7 +197,7 @@ def show_agent_start(agent_id: str, agent_type: str, description: str, color: st
 
 def show_agent_status(agent_id: str, status: str, tool_count: int = 0):
     """Update the agent's current status text"""
-    if _layout_callback and hasattr(_layout_callback, 'update_agent_status'):
+    if _layout_callback and hasattr(_layout_callback, "update_agent_status"):
         _layout_callback.update_agent_status(status, tool_count)
 
 
@@ -213,5 +209,5 @@ def show_agent_tool(agent_id: str, tool_name: str, tool_args: str = ""):
 
 def show_agent_complete(agent_id: str, success: bool = True):
     """Show agent completion"""
-    if _layout_callback and hasattr(_layout_callback, 'clear_agent'):
+    if _layout_callback and hasattr(_layout_callback, "clear_agent"):
         _layout_callback.clear_agent()

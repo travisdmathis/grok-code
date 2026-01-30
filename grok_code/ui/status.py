@@ -1,17 +1,11 @@
 """Status bar - real-time status above input"""
 
 import time
-import asyncio
 from typing import Optional
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass
 
-from rich.console import Console
 from rich.live import Live
 from rich.text import Text
-from rich.table import Table
-from rich.spinner import Spinner
-from rich.style import Style
 
 from .console import console
 
@@ -19,6 +13,7 @@ from .console import console
 @dataclass
 class SessionStats:
     """Track session statistics"""
+
     input_tokens: int = 0
     output_tokens: int = 0
     total_cost: float = 0.0

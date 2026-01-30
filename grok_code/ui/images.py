@@ -14,7 +14,7 @@ def get_clipboard_image() -> tuple[str, str] | None:
     try:
         # Check if clipboard has image data (macOS)
         result = subprocess.run(
-            ["osascript", "-e", 'clipboard info'],
+            ["osascript", "-e", "clipboard info"],
             capture_output=True,
             text=True,
         )
@@ -25,7 +25,10 @@ def get_clipboard_image() -> tuple[str, str] | None:
         # Save clipboard image to temp file
         temp_path = "/tmp/grok_clipboard_image.png"
         subprocess.run(
-            ["osascript", "-e", f'''
+            [
+                "osascript",
+                "-e",
+                f"""
                 set theFile to (open for access POSIX file "{temp_path}" with write permission)
                 try
                     set eof theFile to 0
@@ -34,7 +37,8 @@ def get_clipboard_image() -> tuple[str, str] | None:
                 on error
                     close access theFile
                 end try
-            '''],
+            """,
+            ],
             capture_output=True,
         )
 

@@ -1,22 +1,19 @@
 """Display - Polished terminal UI for grokCode"""
 
-import sys
 import os
 import time
-from typing import Optional, Callable
+from typing import Optional
 
-from rich.console import Console, Group
+from rich.console import Console
 from rich.live import Live
 from rich.spinner import Spinner
 from rich.text import Text
 from rich.markdown import Markdown
 from rich.syntax import Syntax
-from rich.panel import Panel
-from rich.style import Style
 
 from .console import console
 from .diff import show_diff, show_edit_preview, show_file_write
-from .agents import show_agent_start, show_agent_tool, show_agent_complete, get_agent_display
+from .agents import show_agent_start, show_agent_tool, show_agent_complete
 
 
 class StreamingText:
@@ -111,7 +108,9 @@ class Display:
         print()
 
         # Subtle tip
-        console.print("[dim]Tip: [cyan]/help[/cyan] for commands · [cyan]@[/cyan] to mention files · [cyan]![/cyan] for bash[/dim]")
+        console.print(
+            "[dim]Tip: [cyan]/help[/cyan] for commands · [cyan]@[/cyan] to mention files · [cyan]![/cyan] for bash[/dim]"
+        )
         print()
 
     def prompt(self) -> str:
@@ -203,7 +202,7 @@ class Display:
         """Truncate text with ellipsis"""
         if len(text) <= max_len:
             return text
-        return text[:max_len - 3] + "..."
+        return text[: max_len - 3] + "..."
 
     def summary(self, stats: dict):
         """Show session summary"""

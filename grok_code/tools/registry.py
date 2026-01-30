@@ -1,6 +1,5 @@
 """Tool registry for managing and executing tools"""
 
-from typing import Any
 
 from .base import Tool
 

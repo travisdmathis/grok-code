@@ -2,9 +2,7 @@
 
 import asyncio
 import os
-import shlex
 import uuid
-from pathlib import Path
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -14,6 +12,7 @@ from .base import Tool
 @dataclass
 class BackgroundTask:
     """A background bash task"""
+
     id: str
     command: str
     task: asyncio.Task
@@ -24,6 +23,7 @@ class BackgroundTask:
 
 class BackgroundTaskManager:
     """Manages background bash tasks"""
+
     _instance: ClassVar["BackgroundTaskManager | None"] = None
     _tasks: ClassVar[dict[str, BackgroundTask]] = {}
 
@@ -75,7 +75,9 @@ class BashTool(Tool):
             "required": ["command"],
         }
 
-    async def execute(self, command: str, timeout: int = 120, run_in_background: bool = False) -> str:
+    async def execute(
+        self, command: str, timeout: int = 120, run_in_background: bool = False
+    ) -> str:
         # Safety check for obviously dangerous commands
         dangerous_patterns = [
             "rm -rf /",
@@ -88,10 +90,11 @@ class BashTool(Tool):
         cmd_lower = command.lower()
         for pattern in dangerous_patterns:
             if pattern in cmd_lower:
-                return f"Error: Refusing to execute potentially dangerous command"
+                return "Error: Refusing to execute potentially dangerous command"
 
         # Check permission system
         from ..permissions import check_requires_permission
+
         allowed, message = check_requires_permission("bash", {"command": command})
         if not allowed:
             return f"⚠️  Permission required:\n{message}\n\nUse approve_operation tool to approve, or modify the command."
@@ -110,9 +113,7 @@ class BashTool(Tool):
             )
 
             try:
-                stdout, stderr = await asyncio.wait_for(
-                    proc.communicate(), timeout=timeout
-                )
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
             except asyncio.TimeoutError:
                 proc.kill()
                 await proc.wait()
@@ -138,7 +139,9 @@ class BashTool(Tool):
             # Truncate if too long
             max_length = 50000
             if len(result) > max_length:
-                result = result[:max_length] + f"\n\n... (truncated, {len(result)} total characters)"
+                result = (
+                    result[:max_length] + f"\n\n... (truncated, {len(result)} total characters)"
+                )
 
             return result
 
@@ -161,9 +164,7 @@ class BashTool(Tool):
                     env=os.environ.copy(),
                 )
 
-                stdout, stderr = await asyncio.wait_for(
-                    proc.communicate(), timeout=timeout
-                )
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
 
                 output_parts = []
                 if stdout:
@@ -234,7 +235,9 @@ class BashOutputTool(Tool):
                 return f"Task {task_id} is still running after 5 minutes"
 
         if bg_task.completed:
-            status = f"Exit code: {bg_task.exit_code}" if bg_task.exit_code is not None else "Completed"
+            status = (
+                f"Exit code: {bg_task.exit_code}" if bg_task.exit_code is not None else "Completed"
+            )
             return f"Task {task_id} - {status}\n\n{bg_task.output}"
         else:
             return f"Task {task_id} is still running..."

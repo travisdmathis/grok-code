@@ -13,6 +13,7 @@ from .plugin_agent import PluginAgent
 @dataclass
 class RunningAgent:
     """Represents a running agent"""
+
     agent: Agent
     task: asyncio.Task
     prompt: str
@@ -54,8 +55,9 @@ class AgentRunner:
         if isinstance(agent_type, str) and self._plugin_registry:
             plugin_agent_def = self._plugin_registry.get_agent(agent_type)
             if plugin_agent_def:
-                return PluginAgent(plugin_agent_def, self.client, self.registry,
-                                   on_status=self._on_status)
+                return PluginAgent(
+                    plugin_agent_def, self.client, self.registry, on_status=self._on_status
+                )
 
         # Handle built-in agent types
         if isinstance(agent_type, str):
@@ -85,7 +87,7 @@ class AgentRunner:
         self._current_agent = agent
 
         # Pass cancel check to agent if it supports it
-        if self._cancel_check and hasattr(agent, 'set_cancel_check'):
+        if self._cancel_check and hasattr(agent, "set_cancel_check"):
             agent.set_cancel_check(self._cancel_check)
 
         try:
@@ -117,9 +119,7 @@ class AgentRunner:
             return result
 
         task = asyncio.create_task(run_and_store())
-        self._running_agents[agent.agent_id] = RunningAgent(
-            agent=agent, task=task, prompt=prompt
-        )
+        self._running_agents[agent.agent_id] = RunningAgent(agent=agent, task=task, prompt=prompt)
 
         return agent.agent_id
 
@@ -128,6 +128,7 @@ class AgentRunner:
         tasks: list[tuple[AgentType | str, str]],
     ) -> list[AgentResult]:
         """Run multiple agents in parallel"""
+
         async def run_one(agent_type: AgentType | str, prompt: str) -> AgentResult:
             return await self.run_agent(agent_type, prompt)
 
@@ -144,7 +145,9 @@ class AgentRunner:
         """Get result for a completed agent"""
         return self._completed_results.get(agent_id)
 
-    async def wait_for_agent(self, agent_id: str, timeout: float | None = None) -> AgentResult | None:
+    async def wait_for_agent(
+        self, agent_id: str, timeout: float | None = None
+    ) -> AgentResult | None:
         """Wait for a background agent to complete"""
         if agent_id in self._completed_results:
             return self._completed_results[agent_id]

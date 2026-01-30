@@ -7,11 +7,9 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.styles import Style
-from prompt_toolkit.formatted_text import HTML, FormattedText
-from prompt_toolkit.layout.processors import BeforeInput
+from prompt_toolkit.formatted_text import HTML
 from pathlib import Path
 
-from .console import console
 
 
 class InterruptedInput:
@@ -49,6 +47,7 @@ def get_plugin_commands() -> dict[str, str]:
     """Get commands from loaded plugins"""
     try:
         from ..plugins.registry import PluginRegistry
+
         registry = PluginRegistry.get_instance()
         cmds = {}
         for cmd in registry.list_commands():
@@ -86,7 +85,7 @@ class GrokCompleter(Completer):
 
         elif "@" in text:
             at_idx = text.rfind("@")
-            path_prefix = text[at_idx + 1:]
+            path_prefix = text[at_idx + 1 :]
             search_path = path_prefix + "*" if path_prefix else "*"
             try:
                 matches = globlib.glob(search_path)
@@ -104,17 +103,19 @@ class GrokCompleter(Completer):
 
 
 # Dark theme style for grokCode
-STYLE = Style.from_dict({
-    'prompt': 'ansicyan bold',
-    'bottom-toolbar': 'bg:#1a1a1a #888888',
-    'bottom-toolbar.text': '#888888',
-    'mode': 'fg:ansigreen',
-    'files': 'fg:ansicyan',
-    'line': 'fg:#444444',
-    'completion-menu': 'bg:#1a1a1a #cccccc',
-    'completion-menu.completion': 'bg:#1a1a1a #cccccc',
-    'completion-menu.completion.current': 'bg:#333333 #ffffff',
-})
+STYLE = Style.from_dict(
+    {
+        "prompt": "ansicyan bold",
+        "bottom-toolbar": "bg:#1a1a1a #888888",
+        "bottom-toolbar.text": "#888888",
+        "mode": "fg:ansigreen",
+        "files": "fg:ansicyan",
+        "line": "fg:#444444",
+        "completion-menu": "bg:#1a1a1a #cccccc",
+        "completion-menu.completion": "bg:#1a1a1a #cccccc",
+        "completion-menu.completion.current": "bg:#333333 #ffffff",
+    }
+)
 
 
 class InputHandler:
@@ -182,42 +183,44 @@ class InputHandler:
         mode_label = MODE_LABELS[mode]
 
         if mode == "auto":
-            parts.append(('class:mode', f'  ⏵⏵ {mode_label}'))
+            parts.append(("class:mode", f"  ⏵⏵ {mode_label}"))
         elif mode == "plan":
-            parts.append(('class:mode', f'  ◇ {mode_label}'))
+            parts.append(("class:mode", f"  ◇ {mode_label}"))
         else:
-            parts.append(('', f'  ○ {mode_label}'))
+            parts.append(("", f"  ○ {mode_label}"))
 
-        parts.append(('class:bottom-toolbar.text', ' (shift+Tab to cycle)'))
+        parts.append(("class:bottom-toolbar.text", " (shift+Tab to cycle)"))
 
         # File changes if any
         if self.files_changed > 0:
-            parts.append(('class:bottom-toolbar.text', ' · '))
-            parts.append(('class:files', f'{self.files_changed} file{"s" if self.files_changed > 1 else ""}'))
+            parts.append(("class:bottom-toolbar.text", " · "))
+            parts.append(
+                ("class:files", f'{self.files_changed} file{"s" if self.files_changed > 1 else ""}')
+            )
             if self.lines_added > 0 or self.lines_removed > 0:
-                parts.append(('class:bottom-toolbar.text', ' '))
+                parts.append(("class:bottom-toolbar.text", " "))
                 if self.lines_added > 0:
-                    parts.append(('fg:ansigreen', f'+{self.lines_added}'))
+                    parts.append(("fg:ansigreen", f"+{self.lines_added}"))
                 if self.lines_removed > 0:
                     if self.lines_added > 0:
-                        parts.append(('class:bottom-toolbar.text', ' '))
-                    parts.append(('fg:ansired', f'-{self.lines_removed}'))
+                        parts.append(("class:bottom-toolbar.text", " "))
+                    parts.append(("fg:ansired", f"-{self.lines_removed}"))
 
         # Status message if any
         if self.status_message:
-            parts.append(('class:bottom-toolbar.text', f' · {self.status_message}'))
+            parts.append(("class:bottom-toolbar.text", f" · {self.status_message}"))
 
         return parts
 
     def _get_continuation(self, width, line_number, is_soft_wrap):
         """Continuation prompt for multiline"""
-        return '  '
+        return "  "
 
     def _get_prompt(self):
         """Get the prompt with surrounding lines"""
         width = os.get_terminal_size().columns
-        line = '─' * width
-        return f'\n\033[90m{line}\033[0m\n\033[36m❯\033[0m '
+        line = "─" * width
+        return f"\n\033[90m{line}\033[0m\n\033[36m❯\033[0m "
 
     def set_status(self, message: str):
         """Set status message in toolbar"""
@@ -250,7 +253,7 @@ class InputHandler:
 
     def get_input(self, prompt=None):
         try:
-            return self.session.prompt([('class:prompt', '❯ ')])
+            return self.session.prompt([("class:prompt", "❯ ")])
         except EOFError:
             return None
         except KeyboardInterrupt:
@@ -258,7 +261,7 @@ class InputHandler:
 
     async def get_input_async(self, prompt=None):
         try:
-            return await self.session.prompt_async([('class:prompt', '❯ ')])
+            return await self.session.prompt_async([("class:prompt", "❯ ")])
         except EOFError:
             return None
         except KeyboardInterrupt:

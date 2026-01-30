@@ -10,28 +10,23 @@ GROK_THEME = Theme(
         "grok": "bold bright_cyan",
         "grok.dim": "cyan",
         "user": "bold bright_green",
-
         # Tool colors
         "tool": "yellow",
         "tool.name": "bold yellow",
         "tool.arg": "dim yellow",
         "tool.result": "dim",
-
         # Status colors
         "error": "bold red",
         "warning": "yellow",
         "success": "bold green",
         "info": "dim white",
-
         # UI elements
         "border": "dim cyan",
         "muted": "dim",
         "highlight": "bold white",
-
         # Code
         "code": "bright_cyan",
         "path": "underline cyan",
-
         # Spinners
         "spinner": "cyan",
     }

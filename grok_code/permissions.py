@@ -1,13 +1,14 @@
 """Permission system for dangerous operations"""
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, ClassVar
 
 
 @dataclass
 class PermissionRule:
     """A rule for requiring permission"""
+
     pattern: str
     description: str
     tool: str  # Tool this applies to, or "*" for all
@@ -20,7 +21,9 @@ class PermissionManager:
 
     def __init__(self):
         self._rules: list[PermissionRule] = []
-        self._pending_approval: dict[str, tuple[str, str, dict]] = {}  # id -> (tool, description, args)
+        self._pending_approval: dict[str, tuple[str, str, dict]] = (
+            {}
+        )  # id -> (tool, description, args)
         self._approved_patterns: set[str] = set()
         self._confirmation_callback: Callable[[str, str], bool] | None = None
         self._init_default_rules()
@@ -34,43 +37,57 @@ class PermissionManager:
     def _init_default_rules(self):
         """Initialize default permission rules"""
         # Bash rules
-        self.add_rule(PermissionRule(
-            pattern=r"rm\s+-rf?\s+[/~]",
-            description="Recursive delete in root or home directory",
-            tool="bash",
-        ))
-        self.add_rule(PermissionRule(
-            pattern=r"rm\s+-rf?\s+\*",
-            description="Recursive delete with wildcard",
-            tool="bash",
-        ))
-        self.add_rule(PermissionRule(
-            pattern=r"chmod\s+-R\s+777",
-            description="Recursive chmod 777",
-            tool="bash",
-        ))
-        self.add_rule(PermissionRule(
-            pattern=r"git\s+push\s+.*--force",
-            description="Force push to git remote",
-            tool="bash",
-        ))
-        self.add_rule(PermissionRule(
-            pattern=r"git\s+reset\s+--hard",
-            description="Hard reset git repository",
-            tool="bash",
-        ))
-        self.add_rule(PermissionRule(
-            pattern=r"DROP\s+(TABLE|DATABASE)",
-            description="SQL DROP statement",
-            tool="bash",
-        ))
+        self.add_rule(
+            PermissionRule(
+                pattern=r"rm\s+-rf?\s+[/~]",
+                description="Recursive delete in root or home directory",
+                tool="bash",
+            )
+        )
+        self.add_rule(
+            PermissionRule(
+                pattern=r"rm\s+-rf?\s+\*",
+                description="Recursive delete with wildcard",
+                tool="bash",
+            )
+        )
+        self.add_rule(
+            PermissionRule(
+                pattern=r"chmod\s+-R\s+777",
+                description="Recursive chmod 777",
+                tool="bash",
+            )
+        )
+        self.add_rule(
+            PermissionRule(
+                pattern=r"git\s+push\s+.*--force",
+                description="Force push to git remote",
+                tool="bash",
+            )
+        )
+        self.add_rule(
+            PermissionRule(
+                pattern=r"git\s+reset\s+--hard",
+                description="Hard reset git repository",
+                tool="bash",
+            )
+        )
+        self.add_rule(
+            PermissionRule(
+                pattern=r"DROP\s+(TABLE|DATABASE)",
+                description="SQL DROP statement",
+                tool="bash",
+            )
+        )
 
         # File rules
-        self.add_rule(PermissionRule(
-            pattern=r"\.env$|credentials|secret|password|api.?key",
-            description="Writing to sensitive file",
-            tool="write_file",
-        ))
+        self.add_rule(
+            PermissionRule(
+                pattern=r"\.env$|credentials|secret|password|api.?key",
+                description="Writing to sensitive file",
+                tool="write_file",
+            )
+        )
 
     def add_rule(self, rule: PermissionRule) -> None:
         """Add a permission rule"""

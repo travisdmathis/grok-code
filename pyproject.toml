@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["cli", "ai", "grok", "xai", "coding", "assistant"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
@@ -24,11 +24,11 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "httpx>=0.27.0",
-    "rich>=13.0.0",
-    "prompt-toolkit>=3.0.0",
-    "python-dotenv>=1.0.0",
-    "pygments>=2.17.0",
+    "httpx==0.28.1",
+    "rich==14.3.1",
+    "prompt-toolkit==3.0.52",
+    "python-dotenv==1.2.1",
+    "pygments==2.19.2",
 ]
 
 [project.scripts]
@@ -36,9 +36,10 @@ grok = "grok_code.main:main"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "black>=23.0.0",
-    "ruff>=0.1.0",
+    "black==24.4.2",
+    "pytest-cov==5.0.0",
+    "pytest==8.3.2",
+    "ruff==0.6.1",
 ]
 
 [tool.setuptools.packages.find]
@@ -47,8 +48,16 @@ include = ["grok_code*"]
 
 [tool.black]
 line-length = 100
-target-version = ["py310"]
+target-version = ['py310']
 
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.pytest.ini_options]
+addopts = [
+    "-v",
+    "--cov=grok_code",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+]

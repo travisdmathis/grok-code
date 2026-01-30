@@ -212,6 +212,7 @@ Use for finding documentation, solutions, or current information."""
             if "uddg=" in url:
                 try:
                     from urllib.parse import unquote, parse_qs
+
                     parsed = parse_qs(urlparse(url).query)
                     if "uddg" in parsed:
                         result["url"] = unquote(parsed["uddg"][0])

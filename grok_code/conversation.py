@@ -76,16 +76,23 @@ def _get_active_plan_tasks() -> str | None:
     """Get active plan tasks for context injection"""
     try:
         from .tools.tasks import TaskStore, TaskStatus
+
         store = TaskStore.get_instance()
         tasks = store.list_all()
 
         # Filter to pending/in_progress tasks
-        active_tasks = [t for t in tasks if t.status in (TaskStatus.PENDING, TaskStatus.IN_PROGRESS)]
+        active_tasks = [
+            t for t in tasks if t.status in (TaskStatus.PENDING, TaskStatus.IN_PROGRESS)
+        ]
 
         if not active_tasks:
             return None
 
-        lines = ["## Active Plan Tasks", "Mark these complete with `task_update` as you implement them:", ""]
+        lines = [
+            "## Active Plan Tasks",
+            "Mark these complete with `task_update` as you implement them:",
+            "",
+        ]
         for task in active_tasks:
             status_icon = "◐" if task.status == TaskStatus.IN_PROGRESS else "☐"
             lines.append(f"- {status_icon} Task #{task.id}: {task.subject}")
@@ -146,8 +153,7 @@ class Conversation:
         """Refresh the system prompt with current task state"""
         if self._messages and self._messages[0].role == "system":
             self._messages[0] = Message(
-                role="system",
-                content=_build_system_prompt(include_tasks=True)
+                role="system", content=_build_system_prompt(include_tasks=True)
             )
 
     @property
@@ -163,9 +169,7 @@ class Conversation:
         self, content: str | None = None, tool_calls: list[ToolCall] | None = None
     ) -> None:
         """Add an assistant message"""
-        self._messages.append(
-            Message(role="assistant", content=content, tool_calls=tool_calls)
-        )
+        self._messages.append(Message(role="assistant", content=content, tool_calls=tool_calls))
 
     def add_tool_result(self, tool_call_id: str, name: str, result: str) -> None:
         """Add a tool result message"""

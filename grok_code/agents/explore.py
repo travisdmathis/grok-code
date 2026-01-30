@@ -38,7 +38,6 @@ class ExploreAgent(Agent):
     async def run(self, prompt: str, context: dict | None = None) -> AgentResult:
         """Run exploration with the given prompt"""
         from ..client import Message
-        from ..conversation import SYSTEM_PROMPT
 
         system_content = f"""{BASE_AGENT_RULES}
 
@@ -74,7 +73,7 @@ Current working directory: {os.getcwd()}
                     error="Agent cancelled",
                 )
 
-            self._update_status(f"Agent explore: thinking...")
+            self._update_status("Agent explore: thinking...")
             response = await self.client.chat(messages=messages, tools=tools)
             messages.append(response)
 
@@ -92,8 +91,8 @@ Current working directory: {os.getcwd()}
                 elif tool_call.name == "grep":
                     tool_info = f"grep({tool_call.arguments.get('pattern', '')[:30]})"
                 elif tool_call.name == "read_file":
-                    path = tool_call.arguments.get('file_path', '')
-                    short_path = path.split('/')[-1] if '/' in path else path
+                    path = tool_call.arguments.get("file_path", "")
+                    short_path = path.split("/")[-1] if "/" in path else path
                     tool_info = f"read({short_path})"
                 else:
                     tool_info = tool_call.name

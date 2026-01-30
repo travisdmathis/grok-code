@@ -43,11 +43,15 @@ class PlanAgent(Agent):
     def _generate_plan_filename(self, prompt: str) -> str:
         """Generate a descriptive filename for the plan"""
         # Extract key words from prompt
-        words = re.sub(r'[^\w\s]', '', prompt.lower()).split()
+        words = re.sub(r"[^\w\s]", "", prompt.lower()).split()
         # Take first few meaningful words
-        keywords = [w for w in words if len(w) > 2 and w not in ('the', 'and', 'for', 'with', 'this', 'that')][:3]
-        slug = '-'.join(keywords) if keywords else 'plan'
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        keywords = [
+            w
+            for w in words
+            if len(w) > 2 and w not in ("the", "and", "for", "with", "this", "that")
+        ][:3]
+        slug = "-".join(keywords) if keywords else "plan"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         return f"{slug}_{timestamp}.md"
 
     async def run(self, prompt: str, context: dict | None = None) -> AgentResult:
@@ -134,7 +138,7 @@ Current working directory: {os.getcwd()}
                     error="Agent cancelled",
                 )
 
-            self._update_status(f"Planning: thinking...")
+            self._update_status("Planning: thinking...")
             response = await self.client.chat(messages=messages, tools=tools)
             messages.append(response)
 
@@ -154,15 +158,15 @@ Current working directory: {os.getcwd()}
                 elif tool_call.name == "grep":
                     tool_info = f"grep({tool_call.arguments.get('pattern', '')[:30]})"
                 elif tool_call.name == "read_file":
-                    path = tool_call.arguments.get('file_path', '')
-                    short_path = path.split('/')[-1] if '/' in path else path
+                    path = tool_call.arguments.get("file_path", "")
+                    short_path = path.split("/")[-1] if "/" in path else path
                     tool_info = f"read({short_path})"
                 elif tool_call.name == "write_file":
-                    path = tool_call.arguments.get('file_path', '')
-                    short_path = path.split('/')[-1] if '/' in path else path
+                    path = tool_call.arguments.get("file_path", "")
+                    short_path = path.split("/")[-1] if "/" in path else path
                     tool_info = f"write({short_path})"
                     # Extract tasks from the file being written
-                    content = tool_call.arguments.get('content', '')
+                    content = tool_call.arguments.get("content", "")
                     self._extract_and_create_tasks(content, task_store)
                 else:
                     tool_info = tool_call.name
@@ -192,7 +196,9 @@ Current working directory: {os.getcwd()}
                 plan_content = Path(self._plan_file).read_text(encoding="utf-8")
 
                 # Extract and display Overview section
-                overview_match = re.search(r'## Overview\s*\n(.*?)(?=\n## |\Z)', plan_content, re.DOTALL)
+                overview_match = re.search(
+                    r"## Overview\s*\n(.*?)(?=\n## |\Z)", plan_content, re.DOTALL
+                )
                 if overview_match:
                     overview = overview_match.group(1).strip()
                     output_parts.append("## Overview\n")
@@ -200,7 +206,9 @@ Current working directory: {os.getcwd()}
                     output_parts.append("")
 
                 # Extract and display Files to Modify section
-                files_match = re.search(r'## Files to Modify\s*\n(.*?)(?=\n## |\Z)', plan_content, re.DOTALL)
+                files_match = re.search(
+                    r"## Files to Modify\s*\n(.*?)(?=\n## |\Z)", plan_content, re.DOTALL
+                )
                 if files_match:
                     files_section = files_match.group(1).strip()
                     output_parts.append("## Files to Modify\n")
@@ -234,7 +242,7 @@ Current working directory: {os.getcwd()}
     def _extract_and_create_tasks(self, content: str, task_store) -> None:
         """Extract checkbox tasks from content and create them in task store"""
         # Match markdown checkbox format: - [ ] Task description
-        task_pattern = r'- \[ \] (.+?)(?:\n|$)'
+        task_pattern = r"- \[ \] (.+?)(?:\n|$)"
         matches = re.findall(task_pattern, content)
 
         for task_subject in matches:
@@ -244,6 +252,6 @@ Current working directory: {os.getcwd()}
                 task = task_store.create(
                     subject=task_subject,
                     description=f"Plan task: {task_subject}",
-                    active_form=f"Working on: {task_subject[:40]}..."
+                    active_form=f"Working on: {task_subject[:40]}...",
                 )
                 self._tasks.append(task_subject)

@@ -3,7 +3,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import ClassVar
-import uuid
 
 from .base import Tool
 
@@ -18,6 +17,7 @@ class TaskStatus(Enum):
 @dataclass
 class TaskItem:
     """A task/todo item"""
+
     id: str
     subject: str
     description: str
@@ -31,6 +31,7 @@ class TaskItem:
 
 class TaskStore:
     """Global task storage"""
+
     _instance: ClassVar["TaskStore | None"] = None
     _tasks: ClassVar[dict[str, TaskItem]] = {}
     _counter: ClassVar[int] = 0

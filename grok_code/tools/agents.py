@@ -1,7 +1,7 @@
 """Agent-related tools"""
 
 from .base import Tool
-from ..ui.agents import show_agent_start, show_agent_tool, show_agent_complete
+from ..ui.agents import show_agent_start, show_agent_complete
 
 
 class TaskTool(Tool):

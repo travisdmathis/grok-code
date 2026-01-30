@@ -1,7 +1,5 @@
 """File search tools: Glob and Grep"""
 
-import fnmatch
-import os
 import re
 from pathlib import Path
 

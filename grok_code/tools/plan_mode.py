@@ -11,6 +11,7 @@ from .base import Tool
 @dataclass
 class PlanModeState:
     """Global plan mode state"""
+
     _instance: ClassVar["PlanModeState | None"] = None
     active: bool = False
     plan_file: str = ""
@@ -29,6 +30,7 @@ class PlanModeState:
             plan_dir = Path(os.getcwd()) / ".grok" / "plans"
             plan_dir.mkdir(parents=True, exist_ok=True)
             import uuid
+
             plan_file = str(plan_dir / f"plan-{uuid.uuid4().hex[:8]}.md")
         self.plan_file = plan_file
         self.plan_content = ""
@@ -94,7 +96,9 @@ class WritePlanTool(Tool):
 
     @property
     def description(self) -> str:
-        return "Write or update the implementation plan. Call this to document your planned approach."
+        return (
+            "Write or update the implementation plan. Call this to document your planned approach."
+        )
 
     @property
     def parameters(self) -> dict:

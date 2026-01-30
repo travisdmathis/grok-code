@@ -9,7 +9,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from .client import GrokClient, Message
+from .client import GrokClient
 from .conversation import Conversation
 from .tools.registry import create_default_registry, setup_agent_runner
 from .tools.file_ops import clear_read_files
@@ -25,14 +25,19 @@ class ChatUI:
         self._streaming_content = ""
         self._stream_start_time = 0.0
 
-    def welcome(self, project_files: list[str] = None, cwd: str = None, model: str = "grok-4-1-fast-reasoning"):
+    def welcome(
+        self,
+        project_files: list[str] = None,
+        cwd: str = None,
+        model: str = "grok-4-1-fast-reasoning",
+    ):
         """Display welcome message"""
         cwd = cwd or os.getcwd()
 
         # Shorten path for display
         home = str(Path.home())
         if cwd.startswith(home):
-            display_cwd = "~" + cwd[len(home):]
+            display_cwd = "~" + cwd[len(home) :]
         else:
             display_cwd = cwd
 
@@ -47,7 +52,7 @@ class ChatUI:
         lines.append(" Type /help for commands, @ to mention files")
         lines.append("")
 
-        self.layout.append_output('\n'.join(lines))
+        self.layout.append_output("\n".join(lines))
 
     def stream_start(self):
         """Start streaming content"""
@@ -63,8 +68,7 @@ class ChatUI:
         if self._streaming_content:
             # Format as agent response with ⏺ prefix
             self.layout.add_assistant_message(
-                self._streaming_content,
-                elapsed=time.time() - self._stream_start_time
+                self._streaming_content, elapsed=time.time() - self._stream_start_time
             )
         self._streaming_content = ""
 
@@ -86,15 +90,15 @@ class ChatUI:
 
     def show_edit(self, filename: str, old_string: str, new_string: str):
         """Show edit preview"""
-        short = filename.split('/')[-1] if '/' in filename else filename
-        removed = old_string.count('\n') + 1
-        added = new_string.count('\n') + 1
+        short = filename.split("/")[-1] if "/" in filename else filename
+        removed = old_string.count("\n") + 1
+        added = new_string.count("\n") + 1
         self.layout.append_output(f"  Edit {short}: -{removed} +{added} lines")
 
     def show_write(self, filename: str, content: str, is_new: bool = False):
         """Show file write"""
-        short = filename.split('/')[-1] if '/' in filename else filename
-        lines = content.count('\n') + 1
+        short = filename.split("/")[-1] if "/" in filename else filename
+        lines = content.count("\n") + 1
         action = "Create" if is_new else "Write"
         self.layout.append_output(f"  {action} {short}: {lines} lines")
 
@@ -123,7 +127,7 @@ class ChatUI:
             parts.append(f"Ran {n} command{'s' if n > 1 else ''}")
 
         if parts:
-            self.layout.append_output(' \u00b7 '.join(parts))
+            self.layout.append_output(" \u00b7 ".join(parts))
 
     def _format_tool(self, name: str, args: dict) -> str:
         """Format tool name and args for display"""
@@ -157,7 +161,7 @@ class ChatUI:
         """Truncate text with ellipsis"""
         if len(text) <= max_len:
             return text
-        return text[:max_len - 3] + "..."
+        return text[: max_len - 3] + "..."
 
 
 async def _clear_helper_after(layout, seconds: float):
@@ -219,9 +223,7 @@ async def run_conversation_turn(
         layout.clear_status()
 
         # Add assistant message to conversation
-        conversation.add_assistant_message(
-            content=response.content, tool_calls=response.tool_calls
-        )
+        conversation.add_assistant_message(content=response.content, tool_calls=response.tool_calls)
 
         # If no tool calls, we're done
         if not response.tool_calls:
@@ -255,8 +257,8 @@ async def run_conversation_turn(
                 new_str = tool_call.arguments.get("new_string", "")
 
                 file_changes["files"].add(filepath)
-                lines_removed = old_str.count('\n') + 1
-                lines_added = new_str.count('\n') + 1
+                lines_removed = old_str.count("\n") + 1
+                lines_added = new_str.count("\n") + 1
                 file_changes["removed"] += lines_removed
                 file_changes["added"] += lines_added
 
@@ -274,7 +276,7 @@ async def run_conversation_turn(
                 content = tool_call.arguments.get("content", "")
 
                 file_changes["files"].add(filepath)
-                lines_added = content.count('\n') + 1
+                lines_added = content.count("\n") + 1
                 file_changes["added"] += lines_added
 
                 # Show diff for new file (empty old content)
@@ -288,8 +290,8 @@ async def run_conversation_turn(
 
             elif tool_call.name == "read_file":
                 filepath = tool_call.arguments.get("file_path", "")
-                short_path = filepath.split('/')[-1] if '/' in filepath else filepath
-                line_count = result.count('\n') if result else 0
+                short_path = filepath.split("/")[-1] if "/" in filepath else filepath
+                line_count = result.count("\n") if result else 0
                 layout.add_tool_call(tool_call.name, short_path, f"{line_count} lines")
 
             else:
@@ -383,7 +385,7 @@ async def main_loop(
                 grok_md = grok_dir / "GROK.md"
 
                 if grok_dir.exists():
-                    layout.set_helper(f".grok already exists in this project")
+                    layout.set_helper(".grok already exists in this project")
                     continue
 
                 # Create .grok directory structure
@@ -393,7 +395,7 @@ async def main_loop(
                 (grok_dir / "handoffs").mkdir(exist_ok=True)
 
                 # Create GROK.md with project instructions
-                grok_md_content = '''# Project Instructions for Grok
+                grok_md_content = """# Project Instructions for Grok
 
 ## Response Style
 
@@ -448,12 +450,12 @@ Key Directories:
 Add any project-specific instructions here:
 
 -
-'''
+"""
                 grok_md.write_text(grok_md_content)
 
                 # Create example agent
                 example_agent = grok_dir / "agents" / "code-reviewer.md"
-                example_agent_content = '''---
+                example_agent_content = """---
 name: code-reviewer
 description: Reviews code for best practices, security, and style
 tools: read_file, glob, grep, bash
@@ -480,7 +482,7 @@ You are a thorough code reviewer. When reviewing code:
 - Use `file.py:42` format for line references
 - Group issues by severity (Critical, Warning, Suggestion)
 - Include code examples for fixes when helpful
-'''
+"""
                 example_agent.write_text(example_agent_content)
 
                 layout.append_output("")
@@ -514,21 +516,32 @@ You are a thorough code reviewer. When reviewing code:
                 layout.append_output("")
                 layout.append_output("## Commands")
                 layout.append_output("  `/init`       Initialize project    `/help`       Help")
-                layout.append_output("  `/agents`     Manage agents         `/agents new` Create agent")
-                layout.append_output("  `/save`       Save history          `/load`       Load history")
-                layout.append_output("  `/plugins`    Plugins               `/tools`      List tools")
-                layout.append_output("  `/tasks`      Tasks                 `/plan`       Plan mode")
+                layout.append_output(
+                    "  `/agents`     Manage agents         `/agents new` Create agent"
+                )
+                layout.append_output(
+                    "  `/save`       Save history          `/load`       Load history"
+                )
+                layout.append_output(
+                    "  `/plugins`    Plugins               `/tools`      List tools"
+                )
+                layout.append_output(
+                    "  `/tasks`      Tasks                 `/plan`       Plan mode"
+                )
                 layout.append_output("  `/clear`      Clear                 `/config`     Config")
                 layout.append_output("  `/exit`       Exit")
                 layout.append_output("")
                 layout.append_output("## Shortcuts")
-                layout.append_output("  `Ctrl+C` Cancel \u00b7 `Ctrl+C Ctrl+C` Exit \u00b7 `Ctrl+D` Exit")
+                layout.append_output(
+                    "  `Ctrl+C` Cancel \u00b7 `Ctrl+C Ctrl+C` Exit \u00b7 `Ctrl+D` Exit"
+                )
                 layout.append_output("  `PageUp/Down` Scroll \u00b7 `Shift+Tab` Cycle mode")
                 layout.append_output("")
                 continue
 
             if cmd == "tasks":
                 from .tools.tasks import TaskStore
+
                 store = TaskStore.get_instance()
                 tasks = store.list_all()
                 layout.append_output("")
@@ -537,7 +550,11 @@ You are a thorough code reviewer. When reviewing code:
                     layout.append_output("  No active tasks")
                 else:
                     for task in tasks:
-                        status_icon = {"pending": "\u25cb", "in_progress": "\u25d0", "completed": "\u25cf"}.get(task.status.value, "?")
+                        status_icon = {
+                            "pending": "\u25cb",
+                            "in_progress": "\u25d0",
+                            "completed": "\u25cf",
+                        }.get(task.status.value, "?")
                         layout.append_output(f"  {status_icon} #{task.id} {task.subject}")
                 layout.append_output("")
                 continue
@@ -564,7 +581,9 @@ You are a thorough code reviewer. When reviewing code:
                     layout.append_output("")
                     layout.append_output("## Create New Agent")
                     layout.append_output("")
-                    layout.append_output("**Step 1/3:** Describe what this agent does (be detailed)")
+                    layout.append_output(
+                        "**Step 1/3:** Describe what this agent does (be detailed)"
+                    )
                     layout.append_output("Type your description and press Enter:")
                     layout.append_output("")
 
@@ -577,12 +596,16 @@ You are a thorough code reviewer. When reviewing code:
                     if not agent_description:
                         layout.append_output("Cancelled - description required.")
                         continue
-                    layout.append_output(f"> {agent_description[:80]}{'...' if len(agent_description) > 80 else ''}")
+                    layout.append_output(
+                        f"> {agent_description[:80]}{'...' if len(agent_description) > 80 else ''}"
+                    )
                     layout.append_output("")
 
                     # Step 2: Get color
                     layout.append_output("**Step 2/3:** Pick a color")
-                    layout.append_output("  cyan · purple · blue · red · green · orange · yellow · teal · pink · gray")
+                    layout.append_output(
+                        "  cyan · purple · blue · red · green · orange · yellow · teal · pink · gray"
+                    )
                     layout.append_output("  Or enter a hex code like #ff79c6")
                     layout.append_output("")
 
@@ -626,7 +649,7 @@ You are a thorough code reviewer. When reviewing code:
                         continue
 
                     # Create agent with user's description as the prompt
-                    template = f'''---
+                    template = f"""---
 name: {agent_name}
 description: {agent_description[:100]}
 color: {resolved_color}
@@ -646,11 +669,11 @@ tools:
 - Be thorough and precise
 - Ask clarifying questions if needed
 - Provide clear explanations
-'''
+"""
                     agent_file.write_text(template)
 
                     layout.append_output(f"@@TOOL@@ Write(.grok/agents/{agent_name}.md)")
-                    layout.append_output(f"  @@RESULT@@ Created agent")
+                    layout.append_output("  @@RESULT@@ Created agent")
                     layout.append_output("")
                     layout.append_output(f"Run with: `@agent:{agent_name}`")
                     layout.append_output("")
@@ -673,7 +696,11 @@ tools:
                     layout.append_output("")
                     layout.append_output("### Project Agents")
                     for agent in plugin_agents[:15]:
-                        desc = agent.description[:45] + "..." if len(agent.description) > 45 else agent.description
+                        desc = (
+                            agent.description[:45] + "..."
+                            if len(agent.description) > 45
+                            else agent.description
+                        )
                         layout.append_output(f"  `{agent.name}`  {desc}")
 
                 layout.append_output("")
@@ -696,7 +723,11 @@ tools:
                 layout.append_output("")
                 layout.append_output("## Available Tools")
                 for tool in registry.list_tools():
-                    desc = tool.description[:50] + "..." if len(tool.description) > 50 else tool.description
+                    desc = (
+                        tool.description[:50] + "..."
+                        if len(tool.description) > 50
+                        else tool.description
+                    )
                     layout.append_output(f"  `{tool.name}`  {desc}")
                 layout.append_output("")
                 continue
@@ -712,8 +743,10 @@ tools:
                 layout.append_output("## Configuration")
                 layout.append_output(f"  **Model:** `{model}`")
                 layout.append_output(f"  **Working directory:** `{os.getcwd()}`")
-                layout.append_output(f"  **Project files:** {', '.join(conversation.loaded_project_files) or 'None'}")
-                layout.append_output(f"  **API:** xAI (api.x.ai)")
+                layout.append_output(
+                    f"  **Project files:** {', '.join(conversation.loaded_project_files) or 'None'}"
+                )
+                layout.append_output("  **API:** xAI (api.x.ai)")
                 layout.append_output("")
                 continue
 
@@ -723,6 +756,7 @@ tools:
                 if save_args == "history":
                     # Save conversation history to file
                     from datetime import datetime
+
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
                     # Save to .grok/history/ directory
@@ -733,7 +767,9 @@ tools:
 
                     # Build markdown content
                     content_lines = ["# Conversation History", ""]
-                    content_lines.append(f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                    content_lines.append(
+                        f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                    )
                     content_lines.append(f"**Model:** {model}")
                     content_lines.append("")
                     content_lines.append("---")
@@ -751,8 +787,12 @@ tools:
                     history_file.write_text("\n".join(content_lines))
 
                     layout.append_output("")
-                    layout.append_output(f"@@TOOL@@ Write(.grok/history/conversation_{timestamp}.md)")
-                    layout.append_output(f"  @@RESULT@@ Saved {len(conversation.get_messages())} messages")
+                    layout.append_output(
+                        f"@@TOOL@@ Write(.grok/history/conversation_{timestamp}.md)"
+                    )
+                    layout.append_output(
+                        f"  @@RESULT@@ Saved {len(conversation.get_messages())} messages"
+                    )
                     layout.append_output("")
                     continue
 
@@ -783,14 +823,18 @@ tools:
                         # Show available history files
                         if not history_dir.exists():
                             layout.append_output("")
-                            layout.append_output("No saved history found. Use `/save history` first.")
+                            layout.append_output(
+                                "No saved history found. Use `/save history` first."
+                            )
                             layout.append_output("")
                             continue
 
                         history_files = sorted(history_dir.glob("*.md"), reverse=True)
                         if not history_files:
                             layout.append_output("")
-                            layout.append_output("No saved history found. Use `/save history` first.")
+                            layout.append_output(
+                                "No saved history found. Use `/save history` first."
+                            )
                             layout.append_output("")
                             continue
 
@@ -848,7 +892,13 @@ tools:
                                     messages_loaded += 1
                             current_role = "assistant"
                             current_content = []
-                        elif line.startswith("## ") or line.startswith("# ") or line.startswith("---") or line.startswith("**Date:") or line.startswith("**Model:"):
+                        elif (
+                            line.startswith("## ")
+                            or line.startswith("# ")
+                            or line.startswith("---")
+                            or line.startswith("**Date:")
+                            or line.startswith("**Model:")
+                        ):
                             continue  # Skip headers and metadata
                         elif current_role:
                             current_content.append(line)
@@ -866,7 +916,9 @@ tools:
                             messages_loaded += 1
 
                     layout.append_output("")
-                    layout.append_output(f"Loaded {messages_loaded} messages from {history_file.name}")
+                    layout.append_output(
+                        f"Loaded {messages_loaded} messages from {history_file.name}"
+                    )
                     layout.append_output("")
                     continue
 
@@ -880,7 +932,9 @@ tools:
                 continue
 
             if cmd == "plan":
-                conversation.add_user_message("Enter plan mode - I want to plan an implementation before coding.")
+                conversation.add_user_message(
+                    "Enter plan mode - I want to plan an implementation before coding."
+                )
                 start_time = time.time()
                 await run_conversation_turn(client, conversation, registry, ui, layout, start_time)
                 continue
@@ -906,9 +960,13 @@ tools:
                         layout.append_output(f"  **{p.name}** v{p.version}")
                         layout.append_output(f"    {p.description}")
                         if p.agents:
-                            layout.append_output(f"    Agents: {', '.join('`' + a.name + '`' for a in p.agents)}")
+                            layout.append_output(
+                                f"    Agents: {', '.join('`' + a.name + '`' for a in p.agents)}"
+                            )
                         if p.commands:
-                            layout.append_output(f"    Commands: {', '.join('`/' + c.name + '`' for c in p.commands)}")
+                            layout.append_output(
+                                f"    Commands: {', '.join('`/' + c.name + '`' for c in p.commands)}"
+                            )
                 else:
                     layout.append_output("  No plugins loaded")
                     layout.append_output("  Use `/agents new <name>` to create one")
@@ -916,9 +974,9 @@ tools:
                 continue
 
             # Check for plugin commands
-            plugin_cmd = plugin_registry.get_command(cmd.split()[0] if ' ' in cmd else cmd)
+            plugin_cmd = plugin_registry.get_command(cmd.split()[0] if " " in cmd else cmd)
             if plugin_cmd:
-                args = user_input[len(cmd.split()[0]) + 1:].strip() if ' ' in user_input else ""
+                args = user_input[len(cmd.split()[0]) + 1 :].strip() if " " in user_input else ""
                 prompt = plugin_cmd.prompt.replace("$ARGUMENTS", args or "(no arguments provided)")
                 conversation.add_user_message(prompt)
                 start_time = time.time()
@@ -934,6 +992,7 @@ tools:
                 bash_cmd = user_input[1:].strip()
                 if bash_cmd:
                     import subprocess
+
                     ui.info(f"$ {bash_cmd}")
                     try:
                         result = subprocess.run(
@@ -947,7 +1006,9 @@ tools:
                         output = result.stdout + result.stderr
                         if output.strip():
                             ui.info(output)
-                        conversation.add_user_message(f"I ran: {bash_cmd}\n\nOutput:\n{output[:2000]}")
+                        conversation.add_user_message(
+                            f"I ran: {bash_cmd}\n\nOutput:\n{output[:2000]}"
+                        )
                     except subprocess.TimeoutExpired:
                         ui.error("Command timed out")
                     except Exception as e:
@@ -963,7 +1024,7 @@ tools:
             import re
 
             # Handle @plan:name - read plan file and include in message
-            plan_match = re.search(r'@plan:(\S+)', user_input)
+            plan_match = re.search(r"@plan:(\S+)", user_input)
             if plan_match:
                 plan_name = plan_match.group(1)
                 # Find the plan file
@@ -979,9 +1040,9 @@ tools:
                         plan_content = plan_file.read_text(encoding="utf-8")
                         # Replace @plan:name with the actual plan content
                         user_input = re.sub(
-                            r'@plan:\S+',
+                            r"@plan:\S+",
                             f"\n\n**Plan: {plan_file.name}**\n```markdown\n{plan_content}\n```\n",
-                            user_input
+                            user_input,
                         )
                     except Exception as e:
                         layout.set_helper(f"Error reading plan: {e}")
@@ -991,11 +1052,11 @@ tools:
                     asyncio.create_task(_clear_helper_after(layout, 3.0))
                     continue
 
-            agent_match = re.search(r'@agent:(\S+)', user_input)
+            agent_match = re.search(r"@agent:(\S+)", user_input)
             if agent_match:
                 agent_name = agent_match.group(1)
                 # Remove the @agent:name from the prompt
-                prompt = re.sub(r'@agent:\S+\s*', '', user_input).strip()
+                prompt = re.sub(r"@agent:\S+\s*", "", user_input).strip()
 
                 # Check if agent exists - first check built-in agents, then plugins
                 BUILTIN_AGENTS = {"explore", "plan", "general"}
@@ -1009,26 +1070,30 @@ tools:
 
                     # Show agent start with custom color (built-ins have defaults)
                     if agent_def:
-                        agent_color = getattr(agent_def, 'color', None) or "#5f9ea0"
+                        agent_color = getattr(agent_def, "color", None) or "#5f9ea0"
                     else:
                         # Built-in agent colors
                         builtin_colors = {
                             "explore": "#61afef",  # Blue
-                            "plan": "#c678dd",     # Purple
+                            "plan": "#c678dd",  # Purple
                             "general": "#5f9ea0",  # Teal
                         }
                         agent_color = builtin_colors.get(agent_name, "#5f9ea0")
                     layout.set_agent(agent_name, prompt[:40] if prompt else "", agent_color)
 
                     try:
-                        result = await agent_runner.run_agent(agent_name, prompt or f"Help me with: {user_input}")
+                        result = await agent_runner.run_agent(
+                            agent_name, prompt or f"Help me with: {user_input}"
+                        )
 
                         if result.success:
                             layout.add_assistant_message(result.output)
                             conversation.add_user_message(user_input)
                             conversation.add_assistant_message(result.output)
                         else:
-                            layout.add_assistant_message(f"Agent failed: {result.error}\n\n{result.output}")
+                            layout.add_assistant_message(
+                                f"Agent failed: {result.error}\n\n{result.output}"
+                            )
                     except Exception as e:
                         layout.add_assistant_message(f"Error running agent: {e}")
                     finally:
@@ -1045,13 +1110,17 @@ tools:
                                 conversation.add_user_message(queued)
                                 layout.set_busy(True)
                                 try:
-                                    await run_conversation_turn(client, conversation, registry, ui, layout, time.time())
+                                    await run_conversation_turn(
+                                        client, conversation, registry, ui, layout, time.time()
+                                    )
                                 finally:
                                     layout.set_busy(False)
                                     layout.reset_input_state()
                     continue
                 else:
-                    layout.set_helper(f"Agent '{agent_name}' not found. Available: explore, plan, general or /agents to list custom.")
+                    layout.set_helper(
+                        f"Agent '{agent_name}' not found. Available: explore, plan, general or /agents to list custom."
+                    )
                     asyncio.create_task(_clear_helper_after(layout, 3.0))
                     continue
 
@@ -1071,16 +1140,16 @@ tools:
 
 async def main_async() -> int:
     """Async main function"""
-    parser = argparse.ArgumentParser(
-        description="grokCode - AI Coding Assistant powered by Grok"
-    )
+    parser = argparse.ArgumentParser(description="grokCode - AI Coding Assistant powered by Grok")
     parser.add_argument(
-        "-m", "--model",
+        "-m",
+        "--model",
         default="grok-4-1-fast-reasoning",
         help="Grok model to use (default: grok-4-1-fast-reasoning)",
     )
     parser.add_argument(
-        "-p", "--prompt",
+        "-p",
+        "--prompt",
         help="Single prompt to run (non-interactive mode)",
     )
     parser.add_argument(
@@ -1106,6 +1175,7 @@ async def main_async() -> int:
 
     # Set up agent UI callback
     from .ui.agents import set_layout_callback
+
     set_layout_callback(layout)
 
     # Load plugins
@@ -1122,8 +1192,7 @@ async def main_async() -> int:
 
             # Status callback that tracks tool calls for expand/collapse
             def agent_status_callback(status: str):
-                layout.set_status(status)
-                # If an agent is active, update the live agent display
+                # If an agent is active, update the agent live display (not root status)
                 if layout._current_agent and status:
                     # Update the @@AGENT_LIVE@@ display
                     layout.update_agent_status(status)
@@ -1139,8 +1208,11 @@ async def main_async() -> int:
                         # Extract tool name and args: "glob(*.py)" -> ("glob", "*.py")
                         if "(" in tool_part and tool_part.endswith(")"):
                             tool_name = tool_part.split("(")[0].lower()
-                            tool_args = tool_part[len(tool_name)+1:-1]
+                            tool_args = tool_part[len(tool_name) + 1 : -1]
                             layout.add_tool_call(tool_name, tool_args, "")
+                else:
+                    # No active agent - update root status bar
+                    layout.set_status(status)
 
             agent_runner.set_status_callback(agent_status_callback)
 
@@ -1153,7 +1225,7 @@ async def main_async() -> int:
                 response = await client.chat_stream(
                     messages=conversation.get_messages(),
                     tools=registry.get_schemas(),
-                    on_content=lambda x: print(x, end='', flush=True),
+                    on_content=lambda x: print(x, end="", flush=True),
                 )
                 print()
                 return 0
@@ -1167,8 +1239,14 @@ async def main_async() -> int:
                 await asyncio.sleep(0.1)
                 ui.welcome(project_files=conversation.loaded_project_files, model=args.model)
                 return await main_loop(
-                    client, conversation, registry, plugin_registry,
-                    agent_runner, layout, ui, args.model
+                    client,
+                    conversation,
+                    registry,
+                    plugin_registry,
+                    agent_runner,
+                    layout,
+                    ui,
+                    args.model,
                 )
 
             # Run both concurrently - main_loop will call layout.exit() when done
@@ -1178,7 +1256,7 @@ async def main_async() -> int:
             # Wait for main task to complete (it will exit the app)
             try:
                 result = await main_task
-            except Exception as e:
+            except Exception:
                 layout.exit()
                 raise
             finally:

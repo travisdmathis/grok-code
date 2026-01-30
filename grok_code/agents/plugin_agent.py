@@ -1,7 +1,6 @@
 """Plugin-based agent - loads agent definition from plugin markdown files"""
 
-from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 from .base import Agent, AgentType, AgentResult, BASE_AGENT_RULES
 from ..plugins.loader import Agent as AgentDefinition
@@ -11,8 +10,14 @@ from ..ui.agents import show_agent_status
 class PluginAgent(Agent):
     """Agent that runs based on a plugin definition"""
 
-    def __init__(self, definition: AgentDefinition, client, registry, agent_id: str = None,
-                 on_status: Optional[Callable[[str], None]] = None):
+    def __init__(
+        self,
+        definition: AgentDefinition,
+        client,
+        registry,
+        agent_id: str = None,
+        on_status: Optional[Callable[[str], None]] = None,
+    ):
         super().__init__(agent_id)
         self.definition = definition
         self.client = client
@@ -146,7 +151,10 @@ class PluginAgent(Agent):
                                 files_modified.add(file_path)
 
                         # Intercept task_update to validate completion
-                        if tool_call.name == "task_update" and tool_call.arguments.get("status") == "completed":
+                        if (
+                            tool_call.name == "task_update"
+                            and tool_call.arguments.get("status") == "completed"
+                        ):
                             if not files_modified:
                                 # Can't complete task without modifying files
                                 result = "Error: Cannot mark task complete - no files have been modified. Use Edit or Write tools to make changes first."
@@ -160,9 +168,7 @@ class PluginAgent(Agent):
                                 )
                                 continue
 
-                        result = await self.registry.execute(
-                            tool_call.name, tool_call.arguments
-                        )
+                        result = await self.registry.execute(tool_call.name, tool_call.arguments)
                         messages.append(
                             Message(
                                 role="tool",
@@ -174,18 +180,29 @@ class PluginAgent(Agent):
                 else:
                     consecutive_no_tools += 1
                     # Check if there are still pending tasks
-                    if "task_list" in [t.lower() for t in self.allowed_tools] or "task_update" in [t.lower() for t in self.allowed_tools]:
+                    if "task_list" in [t.lower() for t in self.allowed_tools] or "task_update" in [
+                        t.lower() for t in self.allowed_tools
+                    ]:
                         try:
                             from ..tools.tasks import TaskStore, TaskStatus
+
                             store = TaskStore.get_instance()
-                            pending = [t for t in store.list_all() if t.status in (TaskStatus.PENDING, TaskStatus.IN_PROGRESS)]
+                            pending = [
+                                t
+                                for t in store.list_all()
+                                if t.status in (TaskStatus.PENDING, TaskStatus.IN_PROGRESS)
+                            ]
                             if pending and consecutive_no_tools < 3:
                                 # Remind agent to continue working
-                                task_names = ", ".join([f"#{t.id}: {t.subject[:30]}" for t in pending[:3]])
-                                messages.append(Message(
-                                    role="user",
-                                    content=f"You still have pending tasks: {task_names}. Continue implementing and mark them complete when done."
-                                ))
+                                task_names = ", ".join(
+                                    [f"#{t.id}: {t.subject[:30]}" for t in pending[:3]]
+                                )
+                                messages.append(
+                                    Message(
+                                        role="user",
+                                        content=f"You still have pending tasks: {task_names}. Continue implementing and mark them complete when done.",
+                                    )
+                                )
                                 continue
                         except Exception:
                             pass
