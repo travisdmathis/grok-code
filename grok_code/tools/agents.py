@@ -20,10 +20,12 @@ class TaskTool(Tool):
 
     @property
     def description(self) -> str:
-        return """Launch a sub-agent to handle complex tasks. Available agent types:
-- explore: Fast codebase exploration, file searching, understanding code structure
-- plan: Software architect for designing implementation approaches
-- general: General-purpose agent for multi-step tasks"""
+        return """Launch a sub-agent to handle tasks. Built-in agents:
+- explore: Fast read-only codebase exploration
+- plan: Creates implementation plans with task lists
+- general: Full tool access for implementing features
+
+Also supports custom project agents defined in .grok/agents/ (e.g., "engineer", "code-reviewer")."""
 
     @property
     def parameters(self) -> dict:
@@ -32,12 +34,11 @@ class TaskTool(Tool):
             "properties": {
                 "agent_type": {
                     "type": "string",
-                    "enum": ["explore", "plan", "general"],
-                    "description": "Type of agent to spawn",
+                    "description": "Agent to spawn: 'explore', 'plan', 'general', or custom agent name",
                 },
                 "prompt": {
                     "type": "string",
-                    "description": "The task/prompt for the agent to work on",
+                    "description": "The task/prompt for the agent, including any relevant context from the conversation",
                 },
                 "run_in_background": {
                     "type": "boolean",
