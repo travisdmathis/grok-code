@@ -1123,19 +1123,24 @@ async def main_async() -> int:
             # Status callback that tracks tool calls for expand/collapse
             def agent_status_callback(status: str):
                 layout.set_status(status)
-                # If an agent is active, parse tool calls from status
-                if layout._current_agent and status and "thinking" not in status.lower():
-                    # Status format options:
-                    # 1. "Agent name: tool_info" (explore agent)
-                    # 2. "Tool(args)" (plugin agent)
-                    tool_part = status
-                    if ": " in status:
-                        _, tool_part = status.split(": ", 1)
-                    # Extract tool name and args: "glob(*.py)" -> ("glob", "*.py")
-                    if "(" in tool_part and tool_part.endswith(")"):
-                        tool_name = tool_part.split("(")[0].lower()
-                        tool_args = tool_part[len(tool_name)+1:-1]
-                        layout.add_tool_call(tool_name, tool_args, "")
+                # If an agent is active, update the live agent display
+                if layout._current_agent and status:
+                    # Update the @@AGENT_LIVE@@ display
+                    layout.update_agent_status(status)
+
+                    # Also track tool calls for expand/collapse
+                    if "thinking" not in status.lower():
+                        # Status format options:
+                        # 1. "Agent name: tool_info" (explore agent)
+                        # 2. "Tool(args)" (plugin agent)
+                        tool_part = status
+                        if ": " in status:
+                            _, tool_part = status.split(": ", 1)
+                        # Extract tool name and args: "glob(*.py)" -> ("glob", "*.py")
+                        if "(" in tool_part and tool_part.endswith(")"):
+                            tool_name = tool_part.split("(")[0].lower()
+                            tool_args = tool_part[len(tool_name)+1:-1]
+                            layout.add_tool_call(tool_name, tool_args, "")
 
             agent_runner.set_status_callback(agent_status_callback)
 

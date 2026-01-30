@@ -164,31 +164,36 @@ Run `/agents new` for an interactive wizard, or create a file in `.grok/agents/`
 
 ```markdown
 ---
+name: my-agent
+description: What this agent does
+color: "#e06c75"
+---
+
+# My Agent
+
+Instructions for the agent go here...
+```
+
+**That's it!** Agents get access to ALL tools by default. No need to list them.
+
+#### Restricting Tools (Optional)
+
+If you want to create a read-only agent (like a code reviewer that shouldn't modify files), specify which tools it can use:
+
+```markdown
+---
 name: code-reviewer
 description: Reviews code for best practices and security
-color: #e06c75
-tools:
-  - Read
-  - Glob
-  - Grep
-  - Bash
+color: "#e06c75"
+tools: read_file, glob, grep, bash
 ---
 
 # Code Reviewer Agent
 
-You are a thorough code reviewer. When reviewing code:
-
-## What to Check
-- **Security**: SQL injection, XSS, auth issues, secrets in code
-- **Performance**: N+1 queries, unnecessary loops, memory leaks
-- **Best Practices**: Error handling, logging, naming conventions
-- **Style**: Consistency with project patterns
-
-## Output Format
-- Use `file.py:42` format for line references
-- Group issues by severity (Critical, Warning, Suggestion)
-- Include code examples for fixes
+You are a thorough code reviewer...
 ```
+
+Available tool names: `read_file`, `write_file`, `edit_file`, `glob`, `grep`, `bash`, `task_create`, `task_update`, `task_list`, `task_get`, `web_fetch`, `web_search`
 
 ### Agent Colors
 

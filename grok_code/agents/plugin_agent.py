@@ -87,11 +87,15 @@ class PluginAgent(Agent):
             messages.insert(1, Message(role="user", content=f"Context:\n{context_str}"))
 
         # Get available tools for this agent
-        tools = []
+        # Empty/missing tools list means ALL tools available (easier for users)
+        all_schemas = self.registry.get_schemas()
         if self.allowed_tools:
-            all_schemas = self.registry.get_schemas()
+            # Filter to only specified tools
             tool_names = [t.lower() for t in self.allowed_tools]
             tools = [s for s in all_schemas if s["function"]["name"].lower() in tool_names]
+        else:
+            # No restriction - agent gets all tools
+            tools = all_schemas
 
         # Run conversation loop
         full_output = ""
