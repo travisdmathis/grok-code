@@ -52,13 +52,5 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Project local
-.grok/*.local
-.grok/*.cache
 .grok/
-.grok/*
-.grok/agents/*
-.grok/plans/*
-.grok/handoffs/*
-.grok/GROK.md
 .github/
