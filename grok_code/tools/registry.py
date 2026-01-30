@@ -39,7 +39,7 @@ class ToolRegistry:
 
 def create_default_registry(include_agent_tools: bool = True) -> ToolRegistry:
     """Create a registry with all default tools"""
-    from .file_ops import ReadTool, WriteTool, EditTool
+    from .file_ops import ReadTool, WriteTool, EditTool, PyEditTool
     from .bash import BashTool, BashOutputTool
     from .glob_grep import GlobTool, GrepTool
 
