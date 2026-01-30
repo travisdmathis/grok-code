@@ -203,6 +203,51 @@ When creating agents, you can specify a color for the UI:
 - `orange`, `yellow`, `teal`, `pink`, `gray`
 - Or any hex code: `#ff79c6`
 
+## Planning & Tasks
+
+### Creating Plans
+
+Use the plan agent to design implementation approaches:
+
+```
+> @agent:plan add user authentication with JWT tokens
+```
+
+This creates a plan file in `.grok/plans/` with:
+- Overview of the approach
+- Files to create/modify
+- Task checklist
+
+### Referencing Plans
+
+Use `@plan:` to include plan files in your prompt:
+
+```
+> @plan:auth-implementation.md implement this plan
+```
+
+Tab completion is available for plan files.
+
+### Task Tracking
+
+Tasks from plans are tracked and displayed live as agents work:
+
+```
+> /tasks
+```
+
+Shows all tasks with status:
+- Pending tasks
+- In-progress tasks (with spinner)
+- Completed tasks (with checkmark and strikethrough)
+
+### Implementation Workflow
+
+1. Create a plan: `@agent:plan add feature X`
+2. Review the plan file in `.grok/plans/`
+3. Implement with an engineer agent: `@agent:engineer @plan:feature-x.md implement this`
+4. Watch tasks complete in real-time
+
 ## Project Configuration
 
 ### .grok/GROK.md
@@ -236,8 +281,8 @@ After `/init`, your project will have:
 .grok/
 ├── GROK.md          # Project instructions
 ├── agents/          # Custom agent definitions
-│   └── code-reviewer.md
-├── plans/           # Planning documents
+│   └── engineer.md  # Example: implementation agent
+├── plans/           # Plan files created by @agent:plan
 ├── history/         # Saved conversations
 └── handoffs/        # Session handoff files
 ```
