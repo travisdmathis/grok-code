@@ -90,10 +90,11 @@ class PluginAgent(Agent):
 
         # Run conversation loop
         full_output = ""
-        max_turns = 20
+        max_turns = 50  # Increased for complex tasks
         tool_count = 0
+        consecutive_no_tools = 0
 
-        for _ in range(max_turns):
+        for turn in range(max_turns):
             if self.is_cancelled:
                 return AgentResult(
                     agent_id=self.agent_id,
@@ -117,6 +118,7 @@ class PluginAgent(Agent):
 
                 # Handle tool calls
                 if response.tool_calls:
+                    consecutive_no_tools = 0
                     for tool_call in response.tool_calls:
                         tool_count += 1
                         # Update status with current tool
@@ -137,7 +139,24 @@ class PluginAgent(Agent):
                             )
                         )
                 else:
-                    # No tool calls, agent is done
+                    consecutive_no_tools += 1
+                    # Check if there are still pending tasks
+                    if "task_list" in [t.lower() for t in self.allowed_tools] or "task_update" in [t.lower() for t in self.allowed_tools]:
+                        try:
+                            from ..tools.tasks import TaskStore, TaskStatus
+                            store = TaskStore.get_instance()
+                            pending = [t for t in store.list_all() if t.status in (TaskStatus.PENDING, TaskStatus.IN_PROGRESS)]
+                            if pending and consecutive_no_tools < 3:
+                                # Remind agent to continue working
+                                task_names = ", ".join([f"#{t.id}: {t.subject[:30]}" for t in pending[:3]])
+                                messages.append(Message(
+                                    role="user",
+                                    content=f"You still have pending tasks: {task_names}. Continue implementing and mark them complete when done."
+                                ))
+                                continue
+                        except Exception:
+                            pass
+                    # No pending tasks or can't check - agent is done
                     break
 
             except Exception as e:
