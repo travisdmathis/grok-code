@@ -10,16 +10,27 @@ A powerful CLI coding assistant powered by [Grok](https://x.ai) (xAI's API). An 
 
 grokCode is a command-line AI coding assistant that helps you understand, write, and modify code through natural conversation inspired by Cluade Code. It can read your files, make edits, run commands, search your codebase, and spawn specialized agents for complex tasks—all from your terminal.
 
-### Key Features
+### Key Features (v0.3.0)
 
-- **Natural Conversation** - Chat with Grok about your code in plain English
-- **File Operations** - Read, write, and edit files with intelligent diff previews
-- **Code Search** - Find files with glob patterns, search contents with regex
-- **Command Execution** - Run shell commands and see results inline
-- **Custom Agents** - Create specialized agents for code review, testing, documentation, and more
-- **Session History** - Save and restore conversations across sessions
-- **Rich Terminal UI** - Full-screen interface with syntax highlighting and markdown rendering
-- **Project Context** - Customize behavior per-project with `.grok/GROK.md`
+- **Semantic Editing** - AST-safe edits: `py_edit_file` (libcst Python), `tree_edit_file` (tree-sitter JS/TS/C++/C#/Rust).
+- **Auto-Tests** - `test_run`: pytest/jest/ruff auto-detect + failures.
+- **Semantic Search** - `semantic_search`: Embeddings/graph for code context.
+- **Pro TUI** - Ctrl+S split-pane (chat|tasks), `>` REPL, `!screenshot` vision.
+- **Task Visuals** - Toolbar progress/Gantt tree.
+- **Natural Conversation** - Chat with Grok about your code.
+- **File Ops/Search/Bash/Agents** - As v0.2.0 + safety.
+- **Project Config** - `.grok/GROK.md` + history/plans.
+
+### New Examples (v0.3.0)
+```
+> build_semantic_index
+> semantic_search "login" k=3
+> py_edit_file auth.py "add def validate(): pass"
+> test_run tests/
+> tree_edit_file app.js "insert fetch after import"
+> /tasks  # Visual progress
+```
+
 
 ## Quick Start
 

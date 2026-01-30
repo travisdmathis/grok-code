@@ -37,3 +37,23 @@
 ### Fixed
 - Gitignore for `.grok/` and `.github/` directories
 
+## [0.3.0] - 2026-01-30
+
+### Added
+- Robust Python editing (`py_edit_file` with libcst AST transforms).
+- Multi-lang editing (`tree_edit_file` with tree-sitter: py/js/ts/cpp/c#/rust).
+- Test runner (`test_run`: pytest/jest/ruff auto-detect).
+- Semantic search (`semantic_search` + `build_semantic_index`: embeddings/graph).
+- TUI split-pane (Ctrl+S: chat|tasks), inline REPL (`>`), screenshot base64.
+- Task visuals (toolbar progress ████░░, Gantt tree).
+
+### Changed
+- All tools linted/black-formatted, pyright clean.
+- Deps: libcst/tree-sitter/sentence-transformers/networkx.
+
+### Fixed
+- Edit safety/syntax, multi-occurrence hints.
+- Runtime errors (types/imports).
+
+**Sponsored by xAI Grok.**
+
