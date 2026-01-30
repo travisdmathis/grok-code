@@ -28,6 +28,8 @@ class AgentRunner:
         self._completed_results: dict[str, AgentResult] = {}
         self._plugin_registry = None
         self._on_status = None  # Status callback
+        self._current_agent: Agent | None = None  # Currently running agent for cancellation
+        self._cancel_check = None  # Callback to check if cancellation requested
 
     def set_plugin_registry(self, plugin_registry):
         """Set the plugin registry for loading plugin agents"""
@@ -36,6 +38,15 @@ class AgentRunner:
     def set_status_callback(self, callback):
         """Set callback for status updates from agents"""
         self._on_status = callback
+
+    def set_cancel_check(self, callback):
+        """Set callback to check if cancellation is requested"""
+        self._cancel_check = callback
+
+    def cancel_current(self):
+        """Cancel the currently running agent"""
+        if self._current_agent:
+            self._current_agent.cancel()
 
     def create_agent(self, agent_type: AgentType | str) -> Agent:
         """Create an agent of the specified type or name"""
@@ -71,7 +82,16 @@ class AgentRunner:
     ) -> AgentResult:
         """Run an agent synchronously and return the result"""
         agent = self.create_agent(agent_type)
-        result = await agent.run(prompt, context)
+        self._current_agent = agent
+
+        # Pass cancel check to agent if it supports it
+        if self._cancel_check and hasattr(agent, 'set_cancel_check'):
+            agent.set_cancel_check(self._cancel_check)
+
+        try:
+            result = await agent.run(prompt, context)
+        finally:
+            self._current_agent = None
 
         self._completed_results[agent.agent_id] = result
 

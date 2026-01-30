@@ -18,6 +18,11 @@ class PluginAgent(Agent):
         self.client = client
         self.registry = registry
         self._on_status = on_status
+        self._cancel_check = None
+
+    def set_cancel_check(self, callback):
+        """Set callback to check if cancellation is requested"""
+        self._cancel_check = callback
 
     @property
     def agent_type(self) -> AgentType:
@@ -93,9 +98,12 @@ class PluginAgent(Agent):
         max_turns = 50  # Increased for complex tasks
         tool_count = 0
         consecutive_no_tools = 0
+        files_modified = set()  # Track files actually modified
 
         for turn in range(max_turns):
-            if self.is_cancelled:
+            # Check for cancellation
+            if self.is_cancelled or (self._cancel_check and self._cancel_check()):
+                self._cancelled = True
                 return AgentResult(
                     agent_id=self.agent_id,
                     agent_type=self.agent_type,
@@ -126,6 +134,27 @@ class PluginAgent(Agent):
                         show_agent_status(self.agent_id, tool_label, tool_count)
                         if self._on_status:
                             self._on_status(tool_label)
+
+                        # Track file modifications
+                        if tool_call.name in ("edit_file", "write_file"):
+                            file_path = tool_call.arguments.get("file_path", "")
+                            if file_path:
+                                files_modified.add(file_path)
+
+                        # Intercept task_update to validate completion
+                        if tool_call.name == "task_update" and tool_call.arguments.get("status") == "completed":
+                            if not files_modified:
+                                # Can't complete task without modifying files
+                                result = "Error: Cannot mark task complete - no files have been modified. Use Edit or Write tools to make changes first."
+                                messages.append(
+                                    Message(
+                                        role="tool",
+                                        content=result,
+                                        tool_call_id=tool_call.id,
+                                        name=tool_call.name,
+                                    )
+                                )
+                                continue
 
                         result = await self.registry.execute(
                             tool_call.name, tool_call.arguments

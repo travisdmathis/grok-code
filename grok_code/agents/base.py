@@ -9,11 +9,12 @@ import uuid
 
 # Base rules that apply to ALL agents
 BASE_AGENT_RULES = """## Base Rules (Always Follow)
-1. Use your tools - NEVER ask the user for file contents. Use Read tool.
+1. USE TOOLS TO DO WORK - You MUST use Edit/Write tools to make changes. Never just describe what you would do - actually do it with tools.
 2. Read before modify - Always read a file before editing or writing to it.
 3. Work autonomously - Don't ask for permission. Just do the work.
 4. Be thorough - Complete the entire task. No placeholders or TODOs.
-5. Mark tasks complete - If tasks exist, use task_update to mark them done.
+5. Mark tasks complete - ONLY mark a task complete AFTER you have used Edit/Write tools to implement it.
+6. NO FAKE COMPLETIONS - If you didn't use Edit/Write to change files, you didn't complete the task.
 """
 
 

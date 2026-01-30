@@ -1117,6 +1117,9 @@ async def main_async() -> int:
             agent_runner = setup_agent_runner(registry, client)
             agent_runner.set_plugin_registry(plugin_registry)
 
+            # Cancel check - allows escape-twice to interrupt agents
+            agent_runner.set_cancel_check(lambda: layout.is_interrupted())
+
             # Status callback that tracks tool calls for expand/collapse
             def agent_status_callback(status: str):
                 layout.set_status(status)

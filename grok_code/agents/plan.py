@@ -17,6 +17,11 @@ class PlanAgent(Agent):
         self._on_status = on_status
         self._plan_file = None
         self._tasks = []
+        self._cancel_check = None
+
+    def set_cancel_check(self, callback):
+        """Set callback to check if cancellation is requested"""
+        self._cancel_check = callback
 
     def _update_status(self, status: str):
         """Update status via callback if available"""
@@ -119,7 +124,8 @@ Current working directory: {os.getcwd()}
         task_store = TaskStore.get_instance()
 
         for turn in range(max_turns):
-            if self.is_cancelled:
+            if self.is_cancelled or (self._cancel_check and self._cancel_check()):
+                self._cancelled = True
                 return AgentResult(
                     agent_id=self.agent_id,
                     agent_type=self.agent_type,

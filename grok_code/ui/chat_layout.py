@@ -1158,6 +1158,27 @@ class ChatLayout:
                 result.append(('#5c6370', f'{status_text}'))
                 result.append(('', '\n'))
 
+                # Show live task list
+                try:
+                    from ..tools.tasks import TaskStore, TaskStatus
+                    store = TaskStore.get_instance()
+                    tasks = store.list_all()
+                    if tasks:
+                        result.append(('', '\n'))
+                        for task in tasks[:10]:  # Limit to 10 tasks
+                            if task.status == TaskStatus.COMPLETED:
+                                result.append(('#98c379', '     ✓ '))
+                                result.append(('#5c6370 strike', f'{task.subject[:50]}'))
+                            elif task.status == TaskStatus.IN_PROGRESS:
+                                result.append(('#61afef', '     ◐ '))
+                                result.append(('#abb2bf', f'{task.subject[:50]}'))
+                            else:
+                                result.append(('#5c6370', '     ☐ '))
+                                result.append(('#abb2bf', f'{task.subject[:50]}'))
+                            result.append(('', '\n'))
+                except Exception:
+                    pass
+
                 # Show collapsed tool count if any
                 if live_tool_count > 0:
                     result.append(('#5c6370', f'     +{live_tool_count} tool uses (ctrl+o to expand)'))
