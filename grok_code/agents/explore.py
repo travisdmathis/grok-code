@@ -1,7 +1,7 @@
 """Explore agent for codebase exploration"""
 
 import os
-from .base import Agent, AgentType, AgentResult
+from .base import Agent, AgentType, AgentResult, BASE_AGENT_RULES
 
 
 class ExploreAgent(Agent):
@@ -35,12 +35,11 @@ class ExploreAgent(Agent):
         from ..client import Message
         from ..conversation import SYSTEM_PROMPT
 
-        system_content = f"""You are an exploration agent. Your job is to explore codebases and find information.
+        system_content = f"""{BASE_AGENT_RULES}
 
-You have access to these tools:
-- read_file: Read file contents
-- glob: Find files by pattern
-- grep: Search file contents
+You are an exploration agent. Your job is to explore codebases and find information.
+
+Tools: read_file, glob, grep
 
 Be thorough but efficient. Search multiple patterns if needed. Summarize your findings clearly.
 

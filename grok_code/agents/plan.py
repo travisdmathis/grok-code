@@ -4,7 +4,7 @@ import os
 import re
 from datetime import datetime
 from pathlib import Path
-from .base import Agent, AgentType, AgentResult
+from .base import Agent, AgentType, AgentResult, BASE_AGENT_RULES
 
 
 class PlanAgent(Agent):
@@ -57,7 +57,9 @@ class PlanAgent(Agent):
         plan_filename = self._generate_plan_filename(prompt)
         self._plan_file = str(plans_dir / plan_filename)
 
-        system_content = f"""You are a software architect planning agent. Your job is to create detailed implementation plans.
+        system_content = f"""{BASE_AGENT_RULES}
+
+You are a software architect planning agent. Your job is to create detailed implementation plans.
 
 ## Process
 1. First, explore the codebase to understand existing patterns and architecture
@@ -97,7 +99,8 @@ IMPORTANT:
 - Use `- [ ]` for uncompleted tasks (checkbox format)
 - Each task should be specific and actionable
 - Tasks should be in logical order of execution
-- After creating the plan file, output the task list so it appears in chat
+- Write the plan file using write_file tool - do NOT output the plan content to chat
+- Keep your chat responses brief - the plan file is the deliverable
 
 Current working directory: {os.getcwd()}
 """
@@ -174,26 +177,52 @@ Current working directory: {os.getcwd()}
                     )
                 )
 
-        # Format final output with task list
-        final_output = "\n".join(full_output) if full_output else ""
+        # Build output with plan summary and tasks
+        output_parts = []
 
-        # Add task summary to output if tasks were created
+        # Read the plan file to extract key sections for display
+        if self._plan_file and Path(self._plan_file).exists():
+            try:
+                plan_content = Path(self._plan_file).read_text(encoding="utf-8")
+
+                # Extract and display Overview section
+                overview_match = re.search(r'## Overview\s*\n(.*?)(?=\n## |\Z)', plan_content, re.DOTALL)
+                if overview_match:
+                    overview = overview_match.group(1).strip()
+                    output_parts.append("## Overview\n")
+                    output_parts.append(overview)
+                    output_parts.append("")
+
+                # Extract and display Files to Modify section
+                files_match = re.search(r'## Files to Modify\s*\n(.*?)(?=\n## |\Z)', plan_content, re.DOTALL)
+                if files_match:
+                    files_section = files_match.group(1).strip()
+                    output_parts.append("## Files to Modify\n")
+                    output_parts.append(files_section)
+                    output_parts.append("")
+
+            except Exception:
+                pass
+
+        # Show task list with markers for rendering
         if self._tasks:
-            final_output += "\n\n## Plan Tasks\n"
-            # Get task IDs from store
+            output_parts.append("## Tasks\n")
             all_tasks = task_store.list_all()
             plan_tasks = [t for t in all_tasks if t.subject in self._tasks]
             for task in plan_tasks:
-                final_output += f"@@PLAN_TASK@@ {task.id}|{task.status.value}|{task.subject}\n"
+                output_parts.append(f"@@PLAN_TASK@@ {task.id}|{task.status.value}|{task.subject}")
 
+        # Show plan file location
         if self._plan_file and Path(self._plan_file).exists():
-            final_output += f"\n\n📋 Plan saved to: `{self._plan_file}`"
+            output_parts.append(f"\n📋 Full plan: `{self._plan_file}`")
+
+        final_output = "\n".join(output_parts) if output_parts else "Planning complete."
 
         return AgentResult(
             agent_id=self.agent_id,
             agent_type=self.agent_type,
             success=True,
-            output=final_output if final_output else "Planning complete.",
+            output=final_output,
         )
 
     def _extract_and_create_tasks(self, content: str, task_store) -> None:

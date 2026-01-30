@@ -692,8 +692,27 @@ class ChatLayout:
         except Exception:
             pass
 
-        # Get file matches (only if not explicitly looking for agents)
-        if not prefix.lower().startswith("agent:"):
+        # Get plan files for @plan: mentions
+        if not prefix or prefix.lower().startswith("plan") or prefix.lower().startswith("plan:"):
+            try:
+                plans_dir = Path(os.getcwd()) / ".grok" / "plans"
+                if plans_dir.exists():
+                    plan_prefix = prefix[5:] if prefix.lower().startswith("plan:") else ""
+                    for plan_file in sorted(plans_dir.glob("*.md"), reverse=True)[:5]:
+                        plan_name = plan_file.stem
+                        if not plan_prefix or plan_name.lower().startswith(plan_prefix.lower()):
+                            # Extract date from filename for description
+                            desc = ""
+                            if "_" in plan_name:
+                                parts = plan_name.rsplit("_", 1)
+                                if len(parts[1]) >= 8:
+                                    desc = f"{parts[1][:4]}-{parts[1][4:6]}-{parts[1][6:8]}"
+                            matches.append(("plan", f"plan:{plan_name}", desc))
+            except Exception:
+                pass
+
+        # Get file matches (only if not explicitly looking for agents or plans)
+        if not prefix.lower().startswith("agent:") and not prefix.lower().startswith("plan:"):
             search_path = prefix + "*" if prefix else "*"
             try:
                 file_matches = globlib.glob(search_path)
@@ -751,6 +770,11 @@ class ChatLayout:
                 if match_type == "agent":
                     display = name.replace("agent:", "")
                     style = '#e06c75'  # Red/pink for agents
+                elif match_type == "plan":
+                    display = name.replace("plan:", "")
+                    if desc:
+                        display = f"{display} ({desc})"
+                    style = '#98c379'  # Green for plans
                 elif match_type == "dir":
                     display = os.path.basename(name) + '/'
                     style = '#5f9ea0'  # Cyan for directories

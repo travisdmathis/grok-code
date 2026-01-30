@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
-from .base import Agent, AgentType, AgentResult
+from .base import Agent, AgentType, AgentResult, BASE_AGENT_RULES
 from ..plugins.loader import Agent as AgentDefinition
 from ..ui.agents import show_agent_status
 
@@ -39,8 +39,8 @@ class PluginAgent(Agent):
         return self.definition.tools
 
     def _get_system_prompt(self) -> str:
-        """Build the system prompt from the definition"""
-        return self.definition.prompt
+        """Build the system prompt from the definition with base rules"""
+        return BASE_AGENT_RULES + "\n---\n\n" + self.definition.prompt
 
     def _format_tool_label(self, tool_name: str, args: dict) -> str:
         """Format a tool call for display"""

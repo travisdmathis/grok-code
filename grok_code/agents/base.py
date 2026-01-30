@@ -7,6 +7,16 @@ from typing import Any
 import uuid
 
 
+# Base rules that apply to ALL agents
+BASE_AGENT_RULES = """## Base Rules (Always Follow)
+1. Use your tools - NEVER ask the user for file contents. Use Read tool.
+2. Read before modify - Always read a file before editing or writing to it.
+3. Work autonomously - Don't ask for permission. Just do the work.
+4. Be thorough - Complete the entire task. No placeholders or TODOs.
+5. Mark tasks complete - If tasks exist, use task_update to mark them done.
+"""
+
+
 class AgentType(Enum):
     """Types of agents available"""
     EXPLORE = "explore"

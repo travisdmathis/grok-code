@@ -961,6 +961,36 @@ tools:
 
             # Check for explicit @agent: mention - directly invoke that agent
             import re
+
+            # Handle @plan:name - read plan file and include in message
+            plan_match = re.search(r'@plan:(\S+)', user_input)
+            if plan_match:
+                plan_name = plan_match.group(1)
+                # Find the plan file
+                plans_dir = Path.cwd() / ".grok" / "plans"
+                plan_file = None
+                for f in plans_dir.glob("*.md"):
+                    if f.stem == plan_name or f.stem.startswith(plan_name):
+                        plan_file = f
+                        break
+
+                if plan_file and plan_file.exists():
+                    try:
+                        plan_content = plan_file.read_text(encoding="utf-8")
+                        # Replace @plan:name with the actual plan content
+                        user_input = re.sub(
+                            r'@plan:\S+',
+                            f"\n\n**Plan: {plan_file.name}**\n```markdown\n{plan_content}\n```\n",
+                            user_input
+                        )
+                    except Exception as e:
+                        layout.set_helper(f"Error reading plan: {e}")
+                        asyncio.create_task(_clear_helper_after(layout, 3.0))
+                else:
+                    layout.set_helper(f"Plan '{plan_name}' not found in .grok/plans/")
+                    asyncio.create_task(_clear_helper_after(layout, 3.0))
+                    continue
+
             agent_match = re.search(r'@agent:(\S+)', user_input)
             if agent_match:
                 agent_name = agent_match.group(1)
