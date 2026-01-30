@@ -4,6 +4,7 @@ import asyncio
 import os
 import re
 import time as _time
+import uuid
 from typing import Optional, List
 from prompt_toolkit import Application
 from prompt_toolkit.buffer import Buffer
@@ -38,17 +39,17 @@ class InterruptedInput:
 
 INTERRUPTED = InterruptedInput()
 
-# Permission modes
-MODES = ["auto", "plan", "manual"]
+# Permission modes (matches ApprovalMode enum)
+MODES = ["auto", "approve", "manual"]
 MODE_LABELS = {
     "auto": "auto-accept",
-    "plan": "plan mode",
-    "manual": "approve edits",
+    "approve": "approve edits",
+    "manual": "approve all",
 }
 MODE_ICONS = {
-    "auto": "\u23f5\u23f5",
-    "plan": "\u25c7",
-    "manual": "\u25cb",
+    "auto": "\u23f5\u23f5",      # ⏵⏵
+    "approve": "\u25cb",         # ○
+    "manual": "\u25a1",          # □
 }
 
 # Commands for completion
@@ -182,9 +183,9 @@ STYLE = Style.from_dict(
         "prompt": "#5f9ea0",
         "toolbar": "bg:#0a0a0a #606060",
         "toolbar.mode": "#6b8e6b",
-        "toolbar.mode-auto": "#6b8e6b",
-        "toolbar.mode-plan": "#5f9ea0",
-        "toolbar.mode-manual": "#707070",
+        "toolbar.mode-auto": "#98c379",    # Green - auto accept
+        "toolbar.mode-approve": "#e5c07b", # Yellow - approve edits
+        "toolbar.mode-manual": "#e06c75",  # Red - approve all
         "toolbar.files": "#5f9ea0",
         "toolbar.hint": "#4a4a4a",
         "queue": "#707070 italic",
@@ -257,8 +258,12 @@ class ChatLayout:
         self._output_lines: List[str] = []
 
         # Message queue
-        self._queued_messages: List[str] = []
+        self._queued_messages: List[dict] = []
         self._is_busy = False
+
+        # Approval state
+        self._waiting_approval = False
+        self._approval_response: Optional[str] = None
 
         # Helper text
         self._helper_text = ""
@@ -364,9 +369,9 @@ class ChatLayout:
         queue_window = ConditionalContainer(
             Window(
                 content=FormattedTextControl(self._get_queue_display),
-                height=Dimension(max=3),
+                height=Dimension(min=1, max=5),
             ),
-            filter=Condition(lambda: bool(self._queued_messages)),
+            filter=Condition(self._has_queued),
         )
 
         # Input - multiline enabled for paste support
@@ -453,6 +458,11 @@ class ChatLayout:
         @self.kb.add("s-tab")
         def handle_shift_tab(event):
             self.mode_idx = (self.mode_idx + 1) % len(MODES)
+            # Sync with permission manager
+            from ..permissions import PermissionManager, ApprovalMode
+            perm_mgr = PermissionManager.get_instance()
+            mode_name = MODES[self.mode_idx]
+            perm_mgr.set_mode(ApprovalMode(mode_name))
 
         @self.kb.add("escape")
         def handle_escape(event):
@@ -783,6 +793,14 @@ class ChatLayout:
                 self.app.invalidate()
 
     def _accept_input(self, buff: Buffer):
+        if self._is_busy:
+            queued_text = self._pasted_content if self._pasted_content is not None else buff.text
+            self.queue_message(queued_text)
+            if self._pasted_content is not None:
+                self._pasted_content = None
+            buff.reset()
+            return
+
         # Use pasted content if available, otherwise use buffer text
         if self._pasted_content is not None:
             self._current_input = self._pasted_content
@@ -887,9 +905,12 @@ class ChatLayout:
         queue_frames = ["\u25f7", "\u25f6", "\u25f5", "\u25f4"]
         frame = queue_frames[self._spinner_idx % len(queue_frames)]
 
+        # Show header
+        parts.append(("#5c6370", f"  Queued ({len(self._queued_messages)}):\n"))
         for msg in self._queued_messages:
-            display_msg = msg[:60] + "..." if len(msg) > 60 else msg
-            parts.append(("class:queue", f"  {frame} {display_msg}\n"))
+            display_msg = msg[:55] + "..." if len(msg) > 55 else msg
+            parts.append(("#61afef", f"  {frame} "))
+            parts.append(("#abb2bf", f"{display_msg}\n"))
 
         return parts
 
@@ -1745,6 +1766,10 @@ class ChatLayout:
     def has_queued_messages(self) -> bool:
         return bool(self._queued_messages)
 
+    def _has_queued(self) -> bool:
+        """Check if there are queued messages (for conditional filter)"""
+        return bool(self._queued_messages)
+
     async def _animate_spinner(self):
         try:
             while self.status_text:
@@ -1823,5 +1848,95 @@ class ChatLayout:
     async def run_async(self):
         await self.app.run_async()
 
+    def show_error_overlay(self, error: str):
+        \"\"\"Show persistent error above input\"\"\"
+        self.clear_status()
+        self._output_lines.append(\"\")
+
+        self._output_lines.append(f\"@@ERROR_BLOCK@@ {error}\")
+        self._output_lines.append(\"Press any key to dismiss...\")
+
+        if self.app.is_running:
+            self.app.invalidate()
+
     def exit(self):
         self.app.exit()
+
+    async def prompt_approval(self, tool_desc: str, danger_reason: str = None) -> str:
+        """
+        Prompt user for tool approval.
+        Returns: 'yes', 'no', or 'always'
+        """
+        # Show the approval prompt in helper area
+        if danger_reason:
+            self._helper_text = f"⚠️  {danger_reason}: {tool_desc}"
+        else:
+            self._helper_text = f"Approve? {tool_desc}"
+
+        # Store original input and set up for approval
+        original_text = self.input_buffer.text
+        self.input_buffer.text = ""
+
+        # Show options
+        self.append_output("")
+        self.append_output(f"@@TOOL@@ {tool_desc}")
+        if danger_reason:
+            self.append_output(f"  ⚠️  DANGEROUS: {danger_reason}")
+        self.append_output("  [y]es  [n]o  [a]lways (save to permissions)")
+
+        if self.app.is_running:
+            self.app.invalidate()
+
+        # Wait for single key input
+        self._approval_response = None
+        self._waiting_approval = True
+
+        # Set up temporary key binding for approval
+        @self.kb.add('y')
+        def approve_yes(event):
+            if self._waiting_approval:
+                self._approval_response = 'yes'
+                self._waiting_approval = False
+                self._input_ready.set()
+
+        @self.kb.add('n')
+        def approve_no(event):
+            if self._waiting_approval:
+                self._approval_response = 'no'
+                self._waiting_approval = False
+                self._input_ready.set()
+
+        @self.kb.add('a')
+        def approve_always(event):
+            if self._waiting_approval:
+                self._approval_response = 'always'
+                self._waiting_approval = False
+                self._input_ready.set()
+
+        @self.kb.add('escape')
+        def approve_escape(event):
+            if self._waiting_approval:
+                self._approval_response = 'no'
+                self._waiting_approval = False
+                self._input_ready.set()
+
+        self._input_ready.clear()
+        await self._input_ready.wait()
+
+        # Clean up
+        self._waiting_approval = False
+        self._helper_text = ""
+
+        # Show result
+        response = self._approval_response or 'no'
+        if response == 'yes':
+            self.append_output("  ✓ Approved")
+        elif response == 'always':
+            self.append_output("  ✓ Approved (saved)")
+        else:
+            self.append_output("  ✗ Denied")
+
+        if self.app.is_running:
+            self.app.invalidate()
+
+        return response

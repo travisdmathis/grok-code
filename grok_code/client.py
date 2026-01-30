@@ -3,6 +3,8 @@
 import html
 import json
 import os
+import ssl
+import certifi
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -147,7 +149,7 @@ class GrokClient:
         tools: list[dict] | None = None,
         temperature: float = 0.7,
         on_content: Callable[[str], None] | None = None,
-        max_retries: int = 2,
+        max_retries: int = 3,
     ) -> Message:
         """Send a chat request with streaming response"""
         payload = {
@@ -232,13 +234,13 @@ class GrokClient:
                     tool_calls=tool_calls,
                 )
 
-            except (httpx.RemoteProtocolError, httpx.ReadError, httpx.ConnectError) as e:
+            except (httpx.RemoteProtocolError, httpx.ReadError, httpx.ConnectError, ssl.SSLError, httpx.ReadTimeout) as e:
                 last_error = e
                 if attempt < max_retries:
-                    # Wait before retry
+                    # Wait before retry with exponential backoff
                     import asyncio
-
-                    await asyncio.sleep(1.0 * (attempt + 1))
+                    wait_time = min(2.0 * (2 ** attempt), 30.0)  # Max 30 seconds
+                    await asyncio.sleep(wait_time)
                     continue
                 # If we got partial content, return what we have
                 if full_content:
@@ -250,6 +252,20 @@ class GrokClient:
                 raise RuntimeError(
                     f"API connection failed after {max_retries + 1} attempts: {e}"
                 ) from e
+            except Exception as e:
+                # Catch any other unexpected errors
+                last_error = e
+                if attempt < max_retries:
+                    import asyncio
+                    await asyncio.sleep(2.0 * (attempt + 1))
+                    continue
+                if full_content:
+                    return Message(
+                        role="assistant",
+                        content=full_content + f"\n\n[Response interrupted - {type(e).__name__}: {e}]",
+                        tool_calls=None,
+                    )
+                raise RuntimeError(f"API error after {max_retries + 1} attempts: {e}") from e
 
     async def __aenter__(self):
         return self

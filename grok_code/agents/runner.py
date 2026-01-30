@@ -6,6 +6,7 @@ from typing import Callable
 
 from .base import Agent, AgentType, AgentResult
 from .explore import ExploreAgent
+from .general import GeneralAgent
 from .plan import PlanAgent
 from .plugin_agent import PluginAgent
 
@@ -71,9 +72,11 @@ class AgentRunner:
             return ExploreAgent(self.client, self.registry, on_status=self._on_status)
         elif agent_type == AgentType.PLAN:
             return PlanAgent(self.client, self.registry, on_status=self._on_status)
+        elif agent_type == AgentType.GENERAL:
+            return GeneralAgent(self.client, self.registry, on_status=self._on_status)
         else:
-            # Default to explore for general purpose
-            return ExploreAgent(self.client, self.registry, on_status=self._on_status)
+            # Default to general for unknown types
+            return GeneralAgent(self.client, self.registry, on_status=self._on_status)
 
     async def run_agent(
         self,

@@ -51,7 +51,7 @@ class ReadTool(Tool):
 
     @property
     def description(self) -> str:
-        return "Read the contents of a file. Returns the file contents with line numbers."
+        return "Read the contents of a file. Returns file contents as [line_num]│[content]. The content after │ is exact - use it directly for edit_file old_string."
 
     @property
     def parameters(self) -> dict:
@@ -100,11 +100,31 @@ class ReadTool(Tool):
         selected_lines = lines[start_idx:end_idx]
 
         # Format with line numbers
+        # Use │ as separator to make it clearer where content starts
         result = []
         for i, line in enumerate(selected_lines, start=start_idx + 1):
-            result.append(f"{i:6}\t{line.rstrip()}")
+            result.append(f"{i:4}│{line.rstrip()}")
 
-        return "\n".join(result) if result else "(empty file)"
+        if not result:
+            return "(empty file)"
+
+        # Detect indentation style
+        indent_counts = {}
+        for line in selected_lines:
+            stripped = line.lstrip()
+            if stripped and not stripped.startswith('#'):
+                indent = len(line) - len(stripped)
+                if indent > 0:
+                    indent_counts[indent] = indent_counts.get(indent, 0) + 1
+
+        output = "\n".join(result)
+
+        # Add indentation hint for files with meaningful indentation
+        if indent_counts:
+            common_indents = sorted(indent_counts.keys())[:4]
+            output += f"\n\n[Indentation: spaces before content shown exactly. Common indents: {common_indents}]"
+
+        return output
 
 
 class WriteTool(Tool):
@@ -167,7 +187,17 @@ class EditTool(Tool):
 
     @property
     def description(self) -> str:
-        return "Edit a file by replacing a specific string with another. The old_string must match exactly (including whitespace)."
+        return """Edit a file by replacing a specific string with another.
+
+CRITICAL: old_string must match EXACTLY including all indentation/whitespace.
+When you read a file, output is: [line_num]│[content]. Copy the content AFTER the │ exactly.
+
+Example - if read_file shows:
+  42│    def foo(self):
+  43│        return True
+
+To edit line 43, old_string must be "        return True" (8 spaces before "return").
+Include 2-3 lines of context to ensure unique match."""
 
     @property
     def parameters(self) -> dict:
@@ -180,11 +210,11 @@ class EditTool(Tool):
                 },
                 "old_string": {
                     "type": "string",
-                    "description": "The exact string to find and replace",
+                    "description": "The EXACT string to find, including all leading whitespace/indentation. Copy directly from read_file output (after the │ separator).",
                 },
                 "new_string": {
                     "type": "string",
-                    "description": "The string to replace it with",
+                    "description": "The replacement string. Must have correct indentation to match the file's style.",
                 },
                 "replace_all": {
                     "type": "boolean",
@@ -219,7 +249,27 @@ class EditTool(Tool):
             return f"Error reading file: {e}"
 
         if old_string not in content:
-            return f"Error: Could not find the specified string in {path}"
+            # Try to find similar content to help debug
+            old_stripped = old_string.strip()
+            hint = ""
+            if old_stripped and old_stripped in content:
+                # Found without leading/trailing whitespace - indentation issue
+                # Find the actual line to show correct indentation
+                for i, line in enumerate(content.split('\n')):
+                    if old_stripped.split('\n')[0].strip() in line:
+                        indent = len(line) - len(line.lstrip())
+                        hint = f"\n\nHint: Found similar content but indentation doesn't match. Line {i+1} has {indent} spaces of indentation. Your old_string may have wrong indentation."
+                        break
+            elif len(old_string) > 20:
+                # Try to find first line
+                first_line = old_string.split('\n')[0].strip()
+                if first_line in content:
+                    for i, line in enumerate(content.split('\n')):
+                        if first_line in line:
+                            indent = len(line) - len(line.lstrip())
+                            hint = f"\n\nHint: Found '{first_line[:40]}...' on line {i+1} with {indent} spaces indentation. Re-read the file and copy the exact whitespace."
+                            break
+            return f"Error: Could not find the specified string in {path}.{hint}"
 
         # Count occurrences
         count = content.count(old_string)

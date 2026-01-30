@@ -182,17 +182,20 @@ async def run_conversation_turn(
     # Refresh task context so Grok knows about active plan tasks
     conversation.refresh_task_context()
 
-    tools = registry.get_schemas()
+    # Root agent gets read-only tools - must delegate to agents for writes
+    all_tools = registry.get_schemas()
+    tools = [t for t in all_tools if t["function"]["name"] not in ("write_file", "edit_file")]
     file_changes = {"files": set(), "added": 0, "removed": 0}
 
     # Mark as busy
     layout.set_busy(True)
 
-    while True:
-        # Check for interruption before starting
-        if layout.is_interrupted():
-            layout.clear_interrupted()
-            layout.set_status("Interrupted")
+    try:
+        while True:
+            # Check for interruption before starting
+            if layout.is_interrupted():
+                layout.clear_interrupted()
+                layout.set_status("Interrupted")
             await asyncio.sleep(0.5)
             layout.clear_status()
             break
@@ -243,6 +246,30 @@ async def run_conversation_turn(
             # Update status spinner
             tool_label = ui._format_tool(tool_call.name, tool_call.arguments)
             layout.set_status(tool_label)
+
+            # Check permissions
+            from .permissions import PermissionManager, format_tool_for_approval
+
+            perm_mgr = PermissionManager.get_instance()
+            allowed, danger_reason, approval_key = perm_mgr.check_permission(
+                tool_call.name, tool_call.arguments
+            )
+
+            if not allowed:
+                # Need approval - prompt user
+                tool_desc = format_tool_for_approval(tool_call.name, tool_call.arguments)
+                response_choice = await layout.prompt_approval(tool_desc, danger_reason)
+
+                if response_choice == "no":
+                    result = "Tool execution denied by user"
+                    conversation.add_tool_result(tool_call.id, tool_call.name, result)
+                    continue
+                elif response_choice == "always":
+                    # Save persistent approval
+                    perm_mgr.approve(tool_call.name, approval_key, persistent=True)
+                else:  # yes
+                    # Session-only approval
+                    perm_mgr.approve(tool_call.name, approval_key, persistent=False)
 
             # Execute tool
             result = await registry.execute(tool_call.name, tool_call.arguments)
@@ -304,9 +331,15 @@ async def run_conversation_turn(
                 result=result,
             )
 
-    layout.clear_status()
-    layout.set_busy(False)
-    layout.reset_input_state()
+    except Exception as e:
+        # Log error to output and re-raise
+        layout.append_output(f"\n@@ERROR@@ {type(e).__name__}: {e}")
+        raise
+    finally:
+        # Always clean up UI state
+        layout.clear_status()
+        layout.set_busy(False)
+        layout.reset_input_state()
 
     # Process any queued messages
     while layout.has_queued_messages():
@@ -1052,79 +1085,9 @@ tools:
                     asyncio.create_task(_clear_helper_after(layout, 3.0))
                     continue
 
-            agent_match = re.search(r"@agent:(\S+)", user_input)
-            if agent_match:
-                agent_name = agent_match.group(1)
-                # Remove the @agent:name from the prompt
-                prompt = re.sub(r"@agent:\S+\s*", "", user_input).strip()
-
-                # Check if agent exists - first check built-in agents, then plugins
-                BUILTIN_AGENTS = {"explore", "plan", "general"}
-                agent_def = plugin_registry.get_agent(agent_name)
-                is_builtin = agent_name in BUILTIN_AGENTS
-
-                if agent_def or is_builtin:
-                    layout.add_user_message(user_input)
-                    layout.set_status(f"Running {agent_name}...")
-                    layout.set_busy(True)
-
-                    # Show agent start with custom color (built-ins have defaults)
-                    if agent_def:
-                        agent_color = getattr(agent_def, "color", None) or "#5f9ea0"
-                    else:
-                        # Built-in agent colors
-                        builtin_colors = {
-                            "explore": "#61afef",  # Blue
-                            "plan": "#c678dd",  # Purple
-                            "general": "#5f9ea0",  # Teal
-                        }
-                        agent_color = builtin_colors.get(agent_name, "#5f9ea0")
-                    layout.set_agent(agent_name, prompt[:40] if prompt else "", agent_color)
-
-                    try:
-                        result = await agent_runner.run_agent(
-                            agent_name, prompt or f"Help me with: {user_input}"
-                        )
-
-                        if result.success:
-                            layout.add_assistant_message(result.output)
-                            conversation.add_user_message(user_input)
-                            conversation.add_assistant_message(result.output)
-                        else:
-                            layout.add_assistant_message(
-                                f"Agent failed: {result.error}\n\n{result.output}"
-                            )
-                    except Exception as e:
-                        layout.add_assistant_message(f"Error running agent: {e}")
-                    finally:
-                        # Clean up all agent state
-                        layout.clear_agent()
-                        layout.clear_status()
-                        layout.set_busy(False)
-                        layout.reset_input_state()
-                        # Process any messages that were queued during agent execution
-                        while layout.has_queued_messages():
-                            queued = layout.pop_queued_message()
-                            if queued:
-                                layout.add_user_message(queued)
-                                conversation.add_user_message(queued)
-                                layout.set_busy(True)
-                                try:
-                                    await run_conversation_turn(
-                                        client, conversation, registry, ui, layout, time.time()
-                                    )
-                                finally:
-                                    layout.set_busy(False)
-                                    layout.reset_input_state()
-                    continue
-                else:
-                    layout.set_helper(
-                        f"Agent '{agent_name}' not found. Available: explore, plan, general or /agents to list custom."
-                    )
-                    asyncio.create_task(_clear_helper_after(layout, 3.0))
-                    continue
-
             # Show user message in chat chain
+            # Note: @agent:name mentions are handled by the root agent, not parsed here
+            # This allows the root agent to gather context and spawn agents appropriately
             layout.add_user_message(user_input)
 
             # Add user message and get response
@@ -1171,6 +1134,14 @@ async def main_async() -> int:
     layout = ChatLayout()
     ui = ChatUI(layout)
     registry = create_default_registry()
+
+    # Sync permission manager mode with layout
+    from .permissions import PermissionManager, ApprovalMode
+
+    perm_mgr = PermissionManager.get_instance()
+    # Map ApprovalMode to layout mode index
+    mode_map = {ApprovalMode.AUTO: 0, ApprovalMode.APPROVE: 1, ApprovalMode.MANUAL: 2}
+    layout.mode_idx = mode_map.get(perm_mgr.mode, 1)
     conversation = Conversation()
 
     # Set up agent UI callback
@@ -1220,11 +1191,16 @@ async def main_async() -> int:
             if args.prompt:
                 conversation.add_user_message(args.prompt)
                 start_time = time.time()
+                # Root agent gets read-only tools
+                all_tools = registry.get_schemas()
+                root_tools = [
+                    t for t in all_tools if t["function"]["name"] not in ("write_file", "edit_file")
+                ]
                 # For non-interactive, we need a simpler output mechanism
                 # Just print to stdout
                 response = await client.chat_stream(
                     messages=conversation.get_messages(),
-                    tools=registry.get_schemas(),
+                    tools=root_tools,
                     on_content=lambda x: print(x, end="", flush=True),
                 )
                 print()
